@@ -10,6 +10,7 @@ Personal collection of Claude Code commands, subagent definitions, and notes on 
 | `agents/` | Subagent definitions (`scout`, `qa-runner`, `implementer`, `deep-reasoner`). Copy to `~/.claude/agents/`. |
 | `docs/orchestration-best-practices.md` | Sourced rules for delegation, model routing, briefs, and evals. |
 | `docs/lead-review.md` | `/lead` checked against those rules, with gaps. |
+| `docs/pr-review-research.md` | What published review systems do to catch real bugs without noise, and which of it `/pr-review` adopts. |
 
 ## Use
 
