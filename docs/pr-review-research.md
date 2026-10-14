@@ -65,6 +65,22 @@ Adopted: sections 6, 7, 13, 14, and the `Residual risk` line in section 16.
 
 Implication: the verifier keeps PLAUSIBLE findings at HIGH and BLOCKER rather than demanding proof, and may run one test to settle them. The dry-run `Dropped:` list in section 16 exists so the gate can be tuned on real PRs rather than trusted.
 
+## 7. Confidence is not severity
+
+Lesson from the first run on a real PR: the verifier CONFIRMED a write-back bug that broke two promises in the PR's own comments, quoted the lines, then scored it 65 because the new store had no callers yet. The gate read 65 as "unsure it exists" and the run approved the PR. The cause was the rubric copied from Anthropic's plugin, whose 50 and 75 anchors mix "rare or minor" with "verified".
+
+What the sources do:
+
+- Codex keeps `confidence_score` (0.0 to 1.0) and `priority` (P0 to P3) as separate fields. [Codex rubric.md]
+- Anthropic's security review keeps `severity` and `confidence` as distinct fields and gates only on confidence of exploitability. [claude-code-security-review]
+- Anthropic's plugin folds both into one 0 to 100 score. That is the design the first version copied, and the one that failed. [claude-plugins-official code-review]
+- Anthropic's cloud review posts low-severity findings inline as "Nit: a minor issue, worth fixing but not blocking", caps them at five in its example config, and "findings are tagged by severity and don't approve or block your PR." [Claude Code review docs]
+- Google: "Consider labeling the severity of your comments, differentiating required changes from guidelines or suggestions", with `Nit:`, `Optional:`, and `FYI:` prefixes, and reviewers "should favor approving a CL once it is in a state where it definitely improves the overall code health." [Google eng-practices, comments and standard]
+- Counterpoint: Codex on GitHub "flags only P0 and P1 issues so review comments stay focused on high-priority risks." Where P2 and P3 go is not documented. [Codex cloud docs]
+- No source covers new code with no callers. The rule that unused code gets no discount is this playbook's own, from the run above: the author would still fix it, which is the Codex bar.
+
+Adopted: section 6 scores confidence on existence only; every CONFIRMED finding is posted, with severity deciding blocking versus non-blocking; PLAUSIBLE MEDIUM items go in the review body, not inline; a confirmed violation of a contract the PR itself states is at least HIGH; a run that drops a CONFIRMED finding and approves is a failed run.
+
 ## Sources
 
 - Claude Code built-in `/code-review` recipe, extracted from the `claude` 2.1.299 binary (strings `Angle A`, `PLAUSIBLE by default`, `Sweep for gaps`)
@@ -85,6 +101,7 @@ Implication: the verifier keeps PLAUSIBLE findings at HIGH and BLOCKER rather th
 - [uReview, Uber](https://www.uber.com/us/en/blog/ureview/)
 - [AutoCommenter, Google](https://arxiv.org/abs/2405.13565)
 - [What to look for in a code review, Google](https://google.github.io/eng-practices/review/reviewer/looking-for.html)
+- [How to write code review comments, Google](https://google.github.io/eng-practices/review/reviewer/comments.html), [The standard of code review](https://google.github.io/eng-practices/review/reviewer/standard.html)
 - [PatchGuru](https://arxiv.org/pdf/2602.05270), [OpenCodeReview](https://arxiv.org/abs/2608.09290)
 - [SWE-PRBench](https://arxiv.org/abs/2603.26130), [SWR-Bench](https://arxiv.org/abs/2509.01494), [Defect-focused review](https://arxiv.org/abs/2505.17928), [Refute-or-Promote](https://arxiv.org/abs/2604.19049)
 - mattpocock-skills `code-review` skill, installed plugin cache

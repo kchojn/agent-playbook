@@ -132,29 +132,32 @@ Verdict per candidate, exactly one:
 - **PLAUSIBLE**: the mechanism is real and the trigger depends on timing, environment, or configuration that is realistic. State what would confirm it. Do not refute a candidate as "speculative" when the state is reachable: races, nil on a rare path such as an error handler or cold cache, boundary off-by-one, partial failure, retry storms.
 - **REFUTED**: only when constructible from the code: factually wrong, quote the line; provably impossible by type, constant, or invariant, show it; already handled in this diff, cite the guard; pure style with no observable effect.
 
-With each verdict: final severity, `confidence` 0 to 100 on this rubric, and the deciding lines.
+With each verdict: final severity from section 7, `confidence` 0 to 100, and the deciding lines. Confidence measures only whether the defect exists. Importance, rarity, and blast radius belong to severity, never to confidence.
 
 - 0: false positive or pre-existing.
 - 25: might be real, could not be verified.
-- 50: verified real, but rare or minor relative to the PR.
-- 75: verified, likely hit in practice, directly affects behavior or breaks a quoted rule.
-- 100: verified, deterministic or frequent, evidence quoted.
+- 50: mechanism verified in the code, trigger not shown.
+- 75: trigger and wrong effect both shown by reading the code, lines quoted.
+- 100: deterministic, or shown by a test.
+
+Two things never lower confidence or severity: the code has no callers yet, and the trigger is rare. New code gets called later, and review is the one time someone reads it closely. The bar is whether the author would fix it once told.
 
 Acceptance gate for a finding to be reported or published:
 
-- CONFIRMED with confidence at least 80, or
+- CONFIRMED, any severity. A CONFIRMED verdict already implies confidence 75 or more; if it does not, the verifier has misjudged one of them and re-states both.
 - PLAUSIBLE with severity HIGH or BLOCKER and confidence at least 70; the comment then opens with the condition that must hold.
+- PLAUSIBLE with severity MEDIUM and confidence at least 60: not inline. It goes into the review body under `Worth a look`, at most three lines.
 
 Everything else is dropped. Dry-run output lists dropped candidates in one line each so the user can calibrate the pipeline. Never verify the same candidate twice; never publish raw candidates.
 
 ## 7. Severity
 
 - **BLOCKER**: security hole, data loss or corruption, funds at risk, or an outage, independent of assumptions about inputs.
-- **HIGH**: a realistic regression or defect that should be fixed before merge.
+- **HIGH**: a realistic regression or defect that should be fixed before merge. A confirmed violation of a contract the PR itself states, in its description, doc comments, or code comments, is at least HIGH: callers will build on that contract.
 - **MEDIUM**: a real defect with a narrow trigger or limited blast radius; a performance or architecture finding with a concrete cost.
 - **LOW**: real but minor. Conventions and style findings never rise above LOW unless the quoted rule says otherwise. At most 5 LOW findings per review; summarize the rest in one line.
 
-Correctness outranks every other category when two findings compete for attention.
+Severity decides how a finding is posted, not whether. A confirmed MEDIUM or LOW is posted as a non-blocking comment; it is never dropped for being small. Correctness outranks every other category when two findings compete for attention.
 
 ## 8. Escalation
 
@@ -212,7 +215,10 @@ A merged or closed PR gets no review. Review body when there are findings, nothi
 Verified findings: <N>
 Highest severity: <severity>
 Verdict: mergeable | mergeable after fixes | not mergeable
+Worth a look: <up to three one-line PLAUSIBLE MEDIUM items, path:line and summary; omit the line when none>
 ```
+
+Verdict rules: `mergeable` only when nothing CONFIRMED is HIGH or BLOCKER; `mergeable after fixes` when a CONFIRMED HIGH exists; `not mergeable` when a BLOCKER exists. A review that drops a CONFIRMED finding and then approves is a failed run.
 
 ## 15. Worker trust
 
@@ -232,6 +238,6 @@ Workers: <count>
 Candidates: <found> / <accepted> / <dropped>
 ```
 
-Then each accepted finding in the comment format above, most severe first. Then, in dry-run, `Dropped:` with one line per dropped candidate: `path:line, verdict, confidence, summary`. Then any pre-existing BLOCKER as one line. With no findings, one line `Residual risk:` naming what the review could not check, or `none`.
+Then each accepted finding in the comment format above, most severe first, each tagged `inline` or `body`. Then, in dry-run, `Dropped:` with one line per dropped candidate: `path:line, verdict, confidence, summary`. Then any pre-existing BLOCKER as one line. With no findings, one line `Residual risk:` naming what the review could not check, or `none`.
 
 $ARGUMENTS
