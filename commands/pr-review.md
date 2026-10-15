@@ -146,7 +146,7 @@ Acceptance gate for a finding to be reported or published:
 
 - CONFIRMED, any severity. A CONFIRMED verdict already implies confidence 75 or more; if it does not, the verifier has misjudged one of them and re-states both.
 - PLAUSIBLE with severity HIGH or BLOCKER and confidence at least 70; the comment then opens with the condition that must hold.
-- PLAUSIBLE with severity MEDIUM and confidence at least 60: not inline. It goes into the review body under `Worth a look`, at most three lines.
+- PLAUSIBLE with severity MEDIUM and confidence at least 60, or PLAUSIBLE at any severity with confidence at least 70: not inline. It goes into the review body under `Worth a look`, at most five lines, highest confidence first. One line costs the author a glance; an inline comment costs a trip to the code.
 
 Everything else is dropped. Dry-run output lists dropped candidates in one line each so the user can calibrate the pipeline. Never verify the same candidate twice; never publish raw candidates.
 
@@ -154,7 +154,7 @@ Everything else is dropped. Dry-run output lists dropped candidates in one line 
 
 - **BLOCKER**: security hole, data loss or corruption, funds at risk, or an outage, independent of assumptions about inputs.
 - **HIGH**: a realistic regression or defect that should be fixed before merge. A confirmed violation of a contract the PR itself states, in its description, doc comments, or code comments, is at least HIGH: callers will build on that contract.
-- **MEDIUM**: a real defect with a narrow trigger or limited blast radius; a performance or architecture finding with a concrete cost.
+- **MEDIUM**: a real defect with a narrow trigger or limited blast radius; a performance or architecture finding with a concrete cost. A silent divergence between what the user is shown and what the action performs, such as a preview, confirmation card, or dry-run that does not match the executed call, is at least MEDIUM even when only one input shape triggers it.
 - **LOW**: real but minor. Conventions and style findings never rise above LOW unless the quoted rule says otherwise. At most 5 LOW findings per review; summarize the rest in one line.
 
 Severity decides how a finding is posted, not whether. A confirmed MEDIUM or LOW is posted as a non-blocking comment; it is never dropped for being small. Correctness outranks every other category when two findings compete for attention.
@@ -215,7 +215,7 @@ A merged or closed PR gets no review. Review body when there are findings, nothi
 Verified findings: <N>
 Highest severity: <severity>
 Verdict: mergeable | mergeable after fixes | not mergeable
-Worth a look: <up to three one-line PLAUSIBLE MEDIUM items, path:line and summary; omit the line when none>
+Worth a look: <up to five one-line PLAUSIBLE items per section 6, path:line and summary; omit the line when none>
 ```
 
 Verdict rules: `mergeable` only when nothing CONFIRMED is HIGH or BLOCKER; `mergeable after fixes` when a CONFIRMED HIGH exists; `not mergeable` when a BLOCKER exists. A review that drops a CONFIRMED finding and then approves is a failed run.

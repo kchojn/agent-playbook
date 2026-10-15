@@ -81,6 +81,13 @@ What the sources do:
 
 Adopted: section 6 scores confidence on existence only; every CONFIRMED finding is posted, with severity deciding blocking versus non-blocking; PLAUSIBLE MEDIUM items go in the review body, not inline; a confirmed violation of a contract the PR itself states is at least HIGH; a run that drops a CONFIRMED finding and approves is a failed run.
 
+## 8. Plausible findings and the review body
+
+Second run on a real PR: the verifier marked a key mismatch between a draft check and the act that executes it as PLAUSIBLE, LOW, confidence 70, and the gate dropped it because PLAUSIBLE LOW had no path out. The mechanism was real: the preview shows the attached file, the executed call creates a document without it. Two fixes follow.
+
+- Any PLAUSIBLE item with confidence 70 or more now reaches the review body, capped at five lines, never inline. The body list costs the author one glance; inline plausible nits are where Greptile measured 79% of comments as unwanted. [Make LLMs shut up]
+- A silent divergence between what the user is shown and what is executed is at least MEDIUM. The Codex rubric's bar, "the author of the original PR would likely fix the issue", applies regardless of how narrow the triggering input is. [Codex rubric.md]
+
 ## Sources
 
 - Claude Code built-in `/code-review` recipe, extracted from the `claude` 2.1.299 binary (strings `Angle A`, `PLAUSIBLE by default`, `Sweep for gaps`)
