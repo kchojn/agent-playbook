@@ -8,6 +8,8 @@ Rules for a lead agent that delegates to subagents in Claude Code. Each rule cit
 - Stay in the main thread for quick targeted edits, iterative work, shared multi-phase context, and latency-sensitive steps. A non-fork subagent starts cold. [Claude Code docs]
 - Delegate work shaped like "find out X and report": test runs, log reading, doc fetches, wide searches. The verbose output stays in the subagent's context. [Claude Code docs]
 - Multi-agent pays off on breadth-first work that splits into independent threads. Token use explained about 80% of the quality gain in Anthropic's research system, at roughly 15x the tokens of a chat. Spend that only where the task is worth it. [Multi-agent research system]
+- Delegation does not cut total tokens: across 945 paired runs, subagents left the total roughly unchanged and only kept the main chat smaller. Delegate for a cheaper model or to keep bulky output out of the lead's context, not to save tokens. [Kensei token tests]
+- Clear history between unrelated tasks. After 30 turns, `/clear` cut the next questions' tokens by 79%; `/compact` saved 39-60% when the next task built on the last. [Kensei token tests]
 
 ## 2. Scale effort to the task
 
@@ -42,6 +44,8 @@ Every delegation states:
 6. **Expected output**: the report format.
 
 Vague briefs make workers duplicate each other or leave gaps. Anthropic's example: "research the semiconductor shortage" sent several workers on the same search. Give an objective, an output format, tool and source guidance, and clear task boundaries. [Multi-agent research system]
+
+Name the file and function even in a short brief. It raised correct answers from 8/20 to 20/20 for 13% more tokens. [Kensei token tests]
 
 Subagents do not see the conversation. Pass the findings they need and nothing more. A subagent with `omitClaudeMd: true`, and the built-in Explore and Plan agents, skip CLAUDE.md, so restate any rule they must follow. [Claude Code docs]
 
@@ -94,3 +98,4 @@ For bugs and any ask of the form "X happens because Y, change Z", check that the
 - [CLAUDE.md rules for subagent delegation - gist](https://gist.github.com/techygarg/f8f98a2f026538fad4a69b593a964d95)
 - [Orchestrating sub-agents for cost-efficient engineering - DEV](https://dev.to/kasundsilva/orchestrating-sub-agents-for-cost-efficient-engineering-1pl3)
 - [I built 100 Claude Code subagents - DEV](https://dev.to/suraj_khaitan_f893c243958/i-built-100-claude-code-subagents-these-are-the-12-that-actually-earn-their-context-10nn)
+- [Stop hitting Claude Code limits: 7 best practices, tested on 945 runs - Kensei](https://x.com/0xKense1/status/2111105138290987198) ([harness and data](https://github.com/kenseii1/claude-code-limits-tests))
