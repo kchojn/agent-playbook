@@ -30,7 +30,7 @@ Implement on the cheaper model, verify on high effort. After a writing phase, ve
 Judge the ask before any phase machinery — from the ask itself and at most a quick look.
 
 - **Trivial** — a one-liner, a single lookup, or an obvious one-file edit where the brief would be longer than the change. Do it yourself. A spawn pays a fixed startup cost before any work; below this line delegating costs more than it saves.
-- **S** — bounded, low-risk, no architectural decision, but more than trivial. One bounded worker, no phases, minimal brief (**Goal**, **Permissions**, **Done when**).
+- **S** — bounded, low-risk, no architectural decision, but more than trivial. One bounded worker, no phases, minimal brief (**Goal**, **Inputs** — the exact files and symbols, **Permissions**, **Done when**).
 - **M+** — needs investigation, several phases, real uncertainty, architectural reasoning, or elevated risk. Full phase orchestration below.
 
 Never split work to increase delegation. If S turns out to be M+ mid-flight, the worker says so in its report and you re-triage.
@@ -47,6 +47,8 @@ Workers never silently implement a different fix. A false, stale, or incomplete 
 ## Phases
 
 **Route per phase, not per task.** One phase = one bounded delegation = one worker. Declare every phase read-only or writing; a phase that surveys broadly and then edits is two phases. If the search is small, let the implementer do it instead of splitting. Every spawn starts by writing its whole context to the cache, so do not add a phase that does not change the outcome.
+
+Delegation does not cut total tokens: a worker re-reads what you would have read. It pays in two ways only: a cheaper model does the work, or bulky output (searches, logs, test runs) stays out of your context. Spawn a phase when one of those holds; otherwise do it yourself.
 
 ## Worker brief
 
