@@ -48,7 +48,7 @@ Never report: formatter-level style, naming taste, anything a linter, type check
 
 ## 2. Resolve target and eligibility
 
-Use `gh` for every GitHub call, as the first word of its own Bash command with `-R <owner>/<repo>`, never behind `cd ... &&`: the sandbox exclusion matches only commands that start with `gh`. A TLS or network error from `gh` inside the sandbox means the call was not excluded; rerun it in that form rather than diagnosing. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components.
+Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components.
 
 Stop with a one-line reason when the PR is merged, closed, a draft, or an automated PR from a bot or dependency updater. Stop when a review from this account already exists for the current head SHA, unless `--publish` was given and the earlier run was a dry-run.
 

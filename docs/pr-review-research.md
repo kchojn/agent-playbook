@@ -100,8 +100,6 @@ Third run, on a race fix: the verifier on its own ran the PR's new test against 
 
 Fourth run: an approval with no confirmed findings carried a body of status lines plus two plausible notes, and it read as machine output on the PR. Plausible items that pass the gate now post inline, tagged `[Optional]`, capped at five, and never change the review event; an approval without confirmed findings has an empty body. This matches Google's advice to label minor comments at the comment itself (`Nit:`, `Optional:`) and Anthropic's cloud review, which posts Nits inline and blocks nothing. [Google eng-practices, comments; Claude Code review docs]
 
-The gate itself is unchanged. The same run also showed a `cd <repo> && gh ...` call failing with TLS errors inside the sandbox: the exclusion pattern `gh *` matches only a command that starts with `gh`, so the command now requires `gh -R <owner>/<repo>` as the first word.
-
 ## Sources
 
 - Claude Code built-in `/code-review` recipe, extracted from the `claude` 2.1.299 binary (strings `Angle A`, `PLAUSIBLE by default`, `Sweep for gaps`)
