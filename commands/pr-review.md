@@ -15,7 +15,7 @@ Never use em dashes. Be short and concrete.
 
 ## Permissions
 
-Allowed: read repository files, PR metadata, diff, CI status, review comments, and git history; run one existing test when it settles a HIGH or BLOCKER candidate; publish review comments only with `--publish`.
+Allowed: read repository files, PR metadata, diff, CI status, review comments, and git history; run one existing test when it settles a HIGH or BLOCKER candidate, and for a bug-fix PR run the PR's own new test in a temporary worktree at the base SHA; publish review comments only with `--publish`.
 
 Never: edit files, commit, push, merge, apply fixes, run builds, linters, or type checks. CI runs those.
 
@@ -40,7 +40,7 @@ Every finding must pass all of these, adapted from the Codex review rubric:
 - It meaningfully affects correctness, security, performance, or maintainability.
 - It is discrete and actionable, not a general complaint about the codebase.
 - Fixing it does not demand more rigor than the rest of the repository shows.
-- The PR causes it. Pre-existing defects are out of scope, with one exception: a pre-existing BLOCKER you notice gets one line in the summary, labeled pre-existing, never an inline comment.
+- The PR causes it. Pre-existing defects are out of scope, with two exceptions that get one line each under `Pre-existing`, never an inline comment: a pre-existing BLOCKER you notice, and a sibling occurrence of the defect this PR fixes that the PR leaves in place.
 - It needs no unstated assumption about intent, and it is not a change the PR describes as intentional.
 - Cross-file breakage names the provably affected code. "This might break something" is not a finding.
 
@@ -56,7 +56,7 @@ Collect the context pack cheaply, from metadata, not by reading the whole diff:
 
 - PR title, body, linked issues, and any review instructions in them.
 - `gh pr checks` status. Do not re-run checks; a failing check is context for the finders.
-- Paths of `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`, and `CONTRIBUTING.md` that govern changed paths: user level, repo root, and any ancestor directory of a changed file. The nearest file wins on conflict.
+- Paths of `CLAUDE.md`, `AGENTS.md`, and `CONTRIBUTING.md` committed to the repo that govern changed paths: repo root and any ancestor directory of a changed file. The nearest file wins on conflict. Private files, `CLAUDE.local.md` and `~/.claude/CLAUDE.md`, bind only a PR this account authored; for anyone else's PR, leave them out of the pack so no candidate is built on them.
 - Existing review comments on this PR.
 - Low-signal files to skip: generated code, lockfiles, snapshots, vendored code, pure formatting commits. They get a glance for unexpected content, not a review.
 
@@ -113,7 +113,7 @@ Angles, correctness first:
 - **H. History**: `git log` and `git blame` for each touched function. A removed or changed line that an earlier commit added as a bug fix is a candidate unless the PR explains it. Fetch prior review comments on the same files from recent PRs; a past complaint this PR repeats is a candidate, and a past complaint the author answered as intentional is not.
 - **I. Performance**: only the concrete patterns from section 1, each with the input size or call frequency that makes it matter.
 - **J. Architecture and reuse**: Grep shared and utility modules adjacent to the change for a helper the new code re-implements; name it. Flag a symptom-level fix, a special case on shared infrastructure, logic in the wrong layer, and a new abstraction with one caller. Name the simpler form.
-- **K. Spec**: compare the PR body and linked issue with the code. Report promised behavior that is missing or partial, behavior changed but not described, and a stated premise the code does not support.
+- **K. Spec**: compare the PR body and linked issue with the code. Report promised behavior that is missing or partial, behavior changed but not described, and a stated premise the code does not support. For a bug-fix PR, Grep for the same defect pattern elsewhere in the repo; a sibling occurrence the PR leaves in place is a `Pre-existing` candidate, and a new test that would also pass on the base is a candidate under tests.
 - **L. Conventions**: read each governing rule file from the context pack. Flag only a clear violation you can quote next to the line that breaks it. No "spirit of the doc" inferences. Rules written for an agent writing code, such as test or commit policy, do not apply to review unless the diff breaks them.
 
 Then the **gap sweep**: re-read the diff and the enclosing functions as a fresh reviewer who holds the candidate list, looking only for defects not already listed. Focus on what first passes miss: moved or extracted code that dropped a guard or anchor, config defaults flipped, lock scope changed, predicate methods with side effects, setup and teardown asymmetry in tests. Add up to 8 candidates. If nothing is new, add nothing.
@@ -124,7 +124,7 @@ Dedupe candidates first: same line and mechanism, or same root cause with severa
 
 Send every remaining candidate to **one** verifier in a single brief, never one worker per candidate: each spawn starts by writing its whole context to the cache. Skip the verifier only when there are no candidates, or every candidate is a conventions finding whose quoted rule and line the lead can check directly.
 
-The verifier is **precision-biased** and tries to **disprove** each claim. It reads the changed code, callers and callees, guards, tests, and base behavior when needed. Every behavioral claim it keeps must rest on code it read, cited as `file:line`; a claim inferred from a name or a comment is not evidence. It may run one Grep-style check or one existing test when that settles a HIGH or BLOCKER candidate.
+The verifier is **precision-biased** and tries to **disprove** each claim. It reads the changed code, callers and callees, guards, tests, and base behavior when needed. Every behavioral claim it keeps must rest on code it read, cited as `file:line`; a claim inferred from a name or a comment is not evidence. It may run one Grep-style check or one existing test when that settles a HIGH or BLOCKER candidate. For a bug-fix PR it runs the PR's new test in a temporary worktree at the base SHA and reports whether it fails there; a test that passes on the base does not prove the fix.
 
 Verdict per candidate, exactly one:
 
@@ -216,6 +216,7 @@ Verified findings: <N>
 Highest severity: <severity>
 Verdict: mergeable | mergeable after fixes | not mergeable
 Worth a look: <up to five one-line PLAUSIBLE items per section 6, path:line and summary; omit the line when none>
+Pre-existing: <one line per item from section 1, path:line and summary; omit the line when none>
 ```
 
 Verdict rules: `mergeable` only when nothing CONFIRMED is HIGH or BLOCKER; `mergeable after fixes` when a CONFIRMED HIGH exists; `not mergeable` when a BLOCKER exists. A review that drops a CONFIRMED finding and then approves is a failed run.
@@ -238,6 +239,6 @@ Workers: <count>
 Candidates: <found> / <accepted> / <dropped>
 ```
 
-Then each accepted finding in the comment format above, most severe first, each tagged `inline` or `body`. Then, in dry-run, `Dropped:` with one line per dropped candidate: `path:line, verdict, confidence, summary`. Then any pre-existing BLOCKER as one line. With no findings, one line `Residual risk:` naming what the review could not check, or `none`.
+Then each accepted finding in the comment format above, most severe first, each tagged `inline` or `body`. Then, in dry-run, `Dropped:` with one line per dropped candidate: `path:line, verdict, confidence, summary`. Then `Pre-existing:` with one line per item from section 1. Then one line `Residual risk:` naming what the review could not check, or `none`.
 
 $ARGUMENTS

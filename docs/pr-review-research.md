@@ -88,6 +88,14 @@ Second run on a real PR: the verifier marked a key mismatch between a draft chec
 - Any PLAUSIBLE item with confidence 70 or more now reaches the review body, capped at five lines, never inline. The body list costs the author one glance; inline plausible nits are where Greptile measured 79% of comments as unwanted. [Make LLMs shut up]
 - A silent divergence between what the user is shown and what is executed is at least MEDIUM. The Codex rubric's bar, "the author of the original PR would likely fix the issue", applies regardless of how narrow the triggering input is. [Codex rubric.md]
 
+## 9. Bug-fix PRs and private rules
+
+Third run, on a race fix: the verifier on its own ran the PR's new test against the old code and showed it failed there, then noted two sibling sinks with the same missing check outside the PR's scope. Both checks are now required rather than left to initiative. Separately, for the second run in a row the finder built candidates on the reviewer's private `CLAUDE.local.md` and dropped them later as not binding on a teammate; private files now enter the context pack only for the reviewer's own PRs.
+
+- "Will the tests actually fail when the code is broken?" is Google's test question; for a fix PR the cheapest answer is to run the new test at the base SHA. [Google eng-practices]
+- Google's reviewer guide expects the reviewer to look at the change's effect on the rest of the system, which for a fix means the other places the same defect lives. The Codex bar, "the author of the original PR would likely fix the issue", holds for a sibling occurrence even though the rubric excludes pre-existing bugs in general; it goes in the review body, not inline. [Google eng-practices; Codex rubric.md]
+- Both Codex and Claude Code read rule files from the repository tree, nearest file first; neither reads a reviewer's private files. [Codex rubric.md; Claude Code code-review recipe]
+
 ## Sources
 
 - Claude Code built-in `/code-review` recipe, extracted from the `claude` 2.1.299 binary (strings `Angle A`, `PLAUSIBLE by default`, `Sweep for gaps`)
