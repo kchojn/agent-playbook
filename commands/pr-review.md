@@ -48,7 +48,7 @@ Never report: formatter-level style, naming taste, anything a linter, type check
 
 ## 2. Resolve target and eligibility
 
-Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components.
+Use `gh` for every GitHub call, as the first word of its own Bash command with `-R <owner>/<repo>`, never behind `cd ... &&`: the sandbox exclusion matches only commands that start with `gh`. A TLS or network error from `gh` inside the sandbox means the call was not excluded; rerun it in that form rather than diagnosing. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components.
 
 Stop with a one-line reason when the PR is merged, closed, a draft, or an automated PR from a bot or dependency updater. Stop when a review from this account already exists for the current head SHA, unless `--publish` was given and the earlier run was a dry-run.
 
@@ -132,7 +132,7 @@ Verdict per candidate, exactly one:
 - **PLAUSIBLE**: the mechanism is real and the trigger depends on timing, environment, or configuration that is realistic. State what would confirm it. Do not refute a candidate as "speculative" when the state is reachable: races, nil on a rare path such as an error handler or cold cache, boundary off-by-one, partial failure, retry storms.
 - **REFUTED**: only when constructible from the code: factually wrong, quote the line; provably impossible by type, constant, or invariant, show it; already handled in this diff, cite the guard; pure style with no observable effect.
 
-With each verdict: final severity from section 7, `confidence` 0 to 100, and the deciding lines. Confidence measures only whether the defect exists. Importance, rarity, and blast radius belong to severity, never to confidence.
+With each verdict: final severity from section 7, `confidence` 0 to 100 for CONFIRMED and PLAUSIBLE only, and the deciding lines. A REFUTED item carries the quoted reason and no number. Confidence measures only whether the defect exists. Importance, rarity, and blast radius belong to severity, never to confidence.
 
 - 0: false positive or pre-existing.
 - 25: might be real, could not be verified.
@@ -146,7 +146,7 @@ Acceptance gate for a finding to be reported or published:
 
 - CONFIRMED, any severity. A CONFIRMED verdict already implies confidence 75 or more; if it does not, the verifier has misjudged one of them and re-states both.
 - PLAUSIBLE with severity HIGH or BLOCKER and confidence at least 70; the comment then opens with the condition that must hold.
-- PLAUSIBLE with severity MEDIUM and confidence at least 60, or PLAUSIBLE at any severity with confidence at least 70: not inline. It goes into the review body under `Worth a look`, at most five lines, highest confidence first. One line costs the author a glance; an inline comment costs a trip to the code.
+- PLAUSIBLE with severity MEDIUM and confidence at least 60, or PLAUSIBLE at any severity with confidence at least 70: posted inline on its line, tagged `[Optional]`, never blocking, at most five per review, highest confidence first. The comment opens with the condition that must hold.
 
 Everything else is dropped. Dry-run output lists dropped candidates in one line each so the user can calibrate the pipeline. Never verify the same candidate twice; never publish raw candidates.
 
@@ -187,12 +187,14 @@ Immediately before publishing: refresh PR state and head SHA, confirm the PR is 
 
 ```
 [HIGH] Imperative title under 80 characters
-One paragraph: what is wrong, the inputs or state that trigger it, and the consequence. A PLAUSIBLE finding opens with the condition that must hold.
+One paragraph: what is wrong, the inputs or state that trigger it, and the consequence.
 Fix: one sentence of direction.
 <details><summary>Why this was flagged</summary>
 file:line quotes that prove it. Confidence: 92.
 </details>
 ```
+
+The tag is the severity for a CONFIRMED finding and `[Optional]` for a PLAUSIBLE one, whose paragraph opens with the condition that must hold and ends with what would confirm it. `[Optional]` comments carry no details block.
 
 Rules, from the Codex rubric and the Claude Code review plugin:
 
@@ -204,19 +206,18 @@ Rules, from the Codex rubric and the Claude Code review plugin:
 
 ## 14. Submission policy
 
-- No findings: APPROVE with an empty body.
+The event follows the CONFIRMED findings only; `[Optional]` comments never change it.
+
+- No CONFIRMED findings: APPROVE.
 - LOW only: COMMENT.
 - MEDIUM: COMMENT by default; REQUEST_CHANGES only when the concrete impact should block merge and the evidence rules out speculation.
 - HIGH or BLOCKER: REQUEST_CHANGES.
 
-A merged or closed PR gets no review. Review body when there are findings, nothing more:
+A merged or closed PR gets no review. The review body is empty unless there is a CONFIRMED finding or a `Pre-existing` item. Then it is one plain sentence, and one `Pre-existing` line per item, nothing more:
 
 ```
-Verified findings: <N>
-Highest severity: <severity>
-Verdict: mergeable | mergeable after fixes | not mergeable
-Worth a look: <up to five one-line PLAUSIBLE items per section 6, path:line and summary; omit the line when none>
-Pre-existing: <one line per item from section 1, path:line and summary; omit the line when none>
+2 findings, highest HIGH. Mergeable after the HIGH is fixed.
+Pre-existing: path:line, one-line summary.
 ```
 
 Verdict rules: `mergeable` only when nothing CONFIRMED is HIGH or BLOCKER; `mergeable after fixes` when a CONFIRMED HIGH exists; `not mergeable` when a BLOCKER exists. A review that drops a CONFIRMED finding and then approves is a failed run.
@@ -235,10 +236,11 @@ Highest: <severity or none>
 Verdict: <as in section 14>
 PR: #<number>
 Head: <short sha>
+Tier: trivial | normal | high-risk | large
 Workers: <count>
-Candidates: <found> / <accepted> / <dropped>
+Candidates: <found> / <after dedupe> / <accepted> / <dropped>
 ```
 
-Then each accepted finding in the comment format above, most severe first, each tagged `inline` or `body`. Then, in dry-run, `Dropped:` with one line per dropped candidate: `path:line, verdict, confidence, summary`. Then `Pre-existing:` with one line per item from section 1. Then one line `Residual risk:` naming what the review could not check, or `none`.
+Then each accepted finding in the comment format above, most severe first, CONFIRMED before `[Optional]`. Then, in dry-run, `Dropped:` with one line per dropped candidate: `path:line, verdict, confidence, summary`. Then `Pre-existing:` with one line per item from section 1. Then one line `Residual risk:` naming what the review could not check, or `none`.
 
 $ARGUMENTS
