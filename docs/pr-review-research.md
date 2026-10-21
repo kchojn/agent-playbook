@@ -100,6 +100,16 @@ Third run, on a race fix: the verifier on its own ran the PR's new test against 
 
 Fourth run: an approval with no confirmed findings carried a body of status lines plus two plausible notes, and it read as machine output on the PR. Plausible items that pass the gate now post inline, tagged `[Optional]`, capped at five, and never change the review event; an approval without confirmed findings has an empty body. This matches Google's advice to label minor comments at the comment itself (`Nit:`, `Optional:`) and Anthropic's cloud review, which posts Nits inline and blocks nothing. [Google eng-practices, comments; Claude Code review docs]
 
+## 11. Cost: cache, tools, and re-reviews
+
+Cloudflare's write-up of tuning its review agents gives measured cost changes that carry over. [Obsessive inference optimization, Cloudflare]
+
+- Workers on the same model share a prompt cache only when their requests open with the same text. Cloudflare moved repo-specific text after a shared prefix and saw first-request cache reads rise from 14-26% to 91-99.5%. Briefs now open with the shared rules and context pack, and the worker's own part comes last.
+- Tools a worker cannot use still cost tokens and calls: sub-reviewers that could see the comment-posting tool tried it in 57-76% of sessions. Finders and verifiers now run on a read-only `reviewer` agent instead of `general-purpose`.
+- In 64% of turns the model made a single tool call. The finder now issues its independent reads together in the first turn.
+- About two-thirds of jobs were re-reviews. A re-review now covers only the commits since the reviewed head.
+- On Sonnet 5.5, high effort cost 61% more per run than medium and posted 58% more critical and warning findings, so `reviewer` runs at high effort.
+
 ## Sources
 
 - Claude Code built-in `/code-review` recipe, extracted from the `claude` 2.1.299 binary (strings `Angle A`, `PLAUSIBLE by default`, `Sweep for gaps`)
@@ -123,4 +133,5 @@ Fourth run: an approval with no confirmed findings carried a body of status line
 - [How to write code review comments, Google](https://google.github.io/eng-practices/review/reviewer/comments.html), [The standard of code review](https://google.github.io/eng-practices/review/reviewer/standard.html)
 - [PatchGuru](https://arxiv.org/pdf/2602.05270), [OpenCodeReview](https://arxiv.org/abs/2608.09290)
 - [SWE-PRBench](https://arxiv.org/abs/2603.26130), [SWR-Bench](https://arxiv.org/abs/2509.01494), [Defect-focused review](https://arxiv.org/abs/2505.17928), [Refute-or-Promote](https://arxiv.org/abs/2604.19049)
+- [Obsessive inference optimization, Cloudflare](https://blog.cloudflare.com/obsessive-inference-optimization/)
 - mattpocock-skills `code-review` skill, installed plugin cache

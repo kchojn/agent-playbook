@@ -52,6 +52,8 @@ Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head 
 
 Stop with a one-line reason when the PR is merged, closed, a draft, or an automated PR from a bot or dependency updater. Stop when a review from this account already exists for the current head SHA, unless `--publish` was given and the earlier run was a dry-run.
 
+**Re-review**: when this account reviewed an earlier head and that head is an ancestor of the current one, review only `<reviewed head>...<head>`. Triage that range, not the whole PR, and add to the context pack the earlier findings with whether the new commits touch their lines. A force-push, a base change, or a merge of the base that touched reviewed files means a full review.
+
 Collect the context pack cheaply, from metadata, not by reading the whole diff:
 
 - PR title, body, linked issues, and any review instructions in them.
@@ -75,9 +77,9 @@ For a large PR: list the highest-risk paths first, use one `scout` mapping phase
 
 | phase | normal | high-risk |
 |-------|--------|-----------|
-| find, all angles | `general-purpose` (sonnet), one worker | `deep-reasoner` (opus, high) |
-| second find, all angles, files in reverse order | none | `general-purpose` (sonnet), in parallel |
-| verify | `general-purpose` (sonnet); `deep-reasoner` when any candidate is HIGH or BLOCKER | `deep-reasoner` |
+| find, all angles | `reviewer` (sonnet, high), one worker | `deep-reasoner` (opus, high) |
+| second find, all angles, files in reverse order | none | `reviewer`, in parallel |
+| verify | `reviewer`; `deep-reasoner` when any candidate is HIGH or BLOCKER | `deep-reasoner` |
 | mapping for large PRs | `scout` (haiku, medium) | `scout` |
 | escalation only, section 8 | `/codex:rescue --background` | same |
 
@@ -89,6 +91,7 @@ Rules:
 - Finding and verifying are separate workers with separate contexts. A finder that also judges itself drops half-believed candidates before anyone checks them; that is the dominant cause of missed bugs. A verifier with its own context is what keeps the published list precise.
 - Normal PR: two workers, one finder and one verifier. High-risk: three; the second finder reads the files in reverse order so the two passes attend to different hunks first, and a candidate both finders raise is a stronger signal. Large: one finder per subsystem plus one verifier. Add a worker only when evidence conflicts, a HIGH or BLOCKER candidate stays uncertain, or a finder reported `NEEDS_CONTEXT`.
 - Independent finders go in one message. The verifier waits for all finders.
+- Briefs share a cached prefix. Every brief to the same agent type opens with the same text, byte for byte: the section 1 lists, the angles, then the context pack. Only after that comes the worker's part: its subsystem, file order, or candidate list. A verifier on the finder's agent type then reads the finder's cache instead of writing its own.
 
 ## 5. Phase 1: find candidates
 
@@ -97,7 +100,7 @@ The finder is **recall-biased**. Its brief:
 - **Goal**: surface every candidate defect this PR introduces, re-exposes, or worsens.
 - **Inputs**: repo path, base and head SHA, changed files, the context pack from section 2, the triage tier, any `--focus` text, and the category list and never-report list from section 1.
 - **Permissions**: read-only. `git diff base...head`, `Read`, `Grep`, `git log`, `git blame`, `gh api` for prior review comments. No builds, no test runs.
-- **Rules**: read every hunk, then the enclosing function of every hunk. Bugs in unchanged lines of a touched function are in scope when the PR re-exposes them. Read the functions and call sites a hunk touches, not whole files; recall drops as unrelated context grows. Work through every angle below in order, in one context. Up to 6 candidates per angle, up to 8 on high-risk. Pass every candidate that has a nameable failure scenario; the verifier judges it, not you. Do not let one angle's conclusion suppress another's. Do not pad to a number.
+- **Rules**: in your first response, issue every independent read at once: the diff, each governing rule file, and the PR's linked issues. One tool call per turn rereads the whole context each time. Read every hunk, then the enclosing function of every hunk. Bugs in unchanged lines of a touched function are in scope when the PR re-exposes them. Read the functions and call sites a hunk touches, not whole files; recall drops as unrelated context grows. Work through every angle below in order, in one context. Up to 6 candidates per angle, up to 8 on high-risk. Pass every candidate that has a nameable failure scenario; the verifier judges it, not you. Do not let one angle's conclusion suppress another's. Do not pad to a number.
 - **Done when**: every angle has run on every changed path, the gap sweep has run, and each candidate carries the fields below.
 - **Return**: first line `Status: DONE | DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED`. Then per candidate: `id`, `category`, provisional severity, `file`, smallest changed line or range at the head SHA, one-sentence `summary`, `failure_scenario` as concrete inputs or state leading to the wrong output, crash, or cost, `evidence` as quoted lines with `file:line`, and `why_pr` stating how this PR causes it. For conventions, quote the rule and its file. For spec mismatch, quote the PR or issue text.
 
