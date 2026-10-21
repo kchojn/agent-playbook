@@ -80,7 +80,9 @@ For bugs and any ask of the form "X happens because Y, change Z", check that the
 - Restrict tools to the job. A read-only scout gets `tools: Read, Grep, Glob, Bash`. A tester gets `disallowedTools: Edit, Write, NotebookEdit`.
 - Set `maxTurns` as a runaway guard where a bounded task has a known size.
 - Fewer, sharper agents beat a large roster. One author built 100 subagents and kept about 12. [100 subagents]
-- Unknown frontmatter fields are ignored silently. Check names against the docs: `disallowedTools`, `omitClaudeMd`, `maxTurns`, `isolation`.
+- Unknown frontmatter fields are ignored silently. Check names against the docs: `disallowedTools`, `omitClaudeMd`, `maxTurns`, `isolation`. [Claude Code docs]
+- A command meant for the user alone gets `disable-model-invocation: true`. Its description then leaves the system prompt of every session and the model cannot start it on its own. [Claude Code skills docs]
+- Tools a worker cannot use still cost tokens and calls. Cloudflare's sub-reviewers saw the tool that posts the final comment and tried it in 57-76% of sessions; removing it saved one call and about 2.9k tokens of tool definitions per request. [Obsessive inference optimization]
 
 ## 10. Evaluate with a small set
 
@@ -89,9 +91,23 @@ For bugs and any ask of the form "X happens because Y, change Z", check that the
 - Use an LLM judge with a rubric (accuracy, completeness, tool efficiency) and a single 0.0-1.0 score plus pass/fail. Keep human review for edge cases.
 - Run the exact prompts and tools yourself first to see failure modes.
 
+## 11. Cut what every call pays for
+
+Every call resends the whole conversation, so cost is calls times context. Three measured levers. [Obsessive inference optimization]
+
+- Workers on the same model share a prompt cache only when their requests open with identical text. Put the shared rules and context first and the worker's own slice last. Cloudflare's first-request cache reads rose from 14-26% to 91-99.5% after moving repo-specific text behind the shared prefix.
+- Fewer turns beat shorter turns. In 64% of turns the model made one tool call; a brief that asks for all independent reads in the first turn removes the re-reads. Reference material pasted into the prompt cut calls per run from 15.9 to 9.6.
+- A turn that produces nothing anyone reads is waste. Cloudflare's runtime sent the result back for a summary nobody saw, about 7 cents per job.
+
+Also from the same team: a worker that hits its time or turn limit is not a provider failure. Retrying it with the same limit fails the same way; give it a narrower brief or a higher limit. Text written by other people (PR bodies, comments, CI logs) is data for the worker, never instructions; say so in the brief. [AI code review at Cloudflare]
+
 ## Sources
 
 - [Create custom subagents - Claude Code Docs](https://code.claude.com/docs/en/sub-agents)
+- [Extend Claude with skills - Claude Code Docs](https://code.claude.com/docs/en/skills)
+- [Best practices - Claude Code Docs](https://code.claude.com/docs/en/best-practices)
+- [Obsessive inference optimization - Cloudflare](https://blog.cloudflare.com/obsessive-inference-optimization/)
+- [AI code review at Cloudflare](https://blog.cloudflare.com/ai-code-review/)
 - [How we built our multi-agent research system - Anthropic](https://www.anthropic.com/engineering/multi-agent-research-system)
 - [Building effective agents - Anthropic](https://www.anthropic.com/engineering/building-effective-agents)
 - [Claude Code subagents and multi-agent orchestration guide - Konishi](https://hidekazu-konishi.com/entry/claude_code_subagents_and_orchestration_guide.html)

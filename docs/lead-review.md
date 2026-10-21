@@ -1,33 +1,34 @@
 # Review of `/lead` against the best practices
 
-Checked against [orchestration-best-practices.md](orchestration-best-practices.md).
-
-## Already covered
+Checked against [orchestration-best-practices.md](orchestration-best-practices.md) on 2026-10-21. Every rule has a home; the table says where.
 
 | Practice | Where in `commands/lead.md` |
 |----------|-----------------------------|
 | Skip delegation for trivial work | Size triage: Trivial / S / M+ |
-| Route model by phase | Route table; "Effort follows the phase" |
-| No cheap model on code | "Never put Haiku on a phase that writes code" |
-| Brief as contract | Worker brief: Goal, Inputs, Constraints, Permissions, Done when, Expected output |
-| Fixed report shape | Worker report with Status token |
-| Parallel only when independent | Delegation rules |
-| Retry never cheaper; escalate after two failures | Delegation rules |
-| Verify the premise | "Verify the premise" section |
-| Lead keeps synthesis | Delegation rules |
+| Worker count scales with the task, with a cap | Size triage, last paragraph |
+| Route model by phase | Workers table; Verification follows the phase |
+| No cheap model on code | Workers: "Never Haiku on a phase that writes or reviews code" |
+| Brief as contract | Worker brief |
+| Restate rules for agents that skip CLAUDE.md | Worker brief: Constraints |
+| Workers batch reads and return big output as a file | Worker brief: rules for every brief |
+| Parallel workers share a cached prefix | Worker brief: rules for every brief |
+| Fixed report shape | Worker report |
+| Parallel only when independent; disjoint files or a worktree for writers | Delegation rules |
+| Turn limit is not a provider failure | Delegation rules |
+| Retry never cheaper; escalate after two failures | Workers; Delegation rules |
+| Destructive actions stay in the lead | Delegation rules |
+| Verify the premise | Verify the premise |
+| Lead keeps synthesis | Workers table: "you"; Delegation rules |
+| User-only command | frontmatter `disable-model-invocation: true` |
 
-## Gaps
-
-1. **No worker-count rule.** Add Anthropic's scaling table (1 worker for a lookup, 2-4 for a comparison, more only when scope divides cleanly) and a cap on spawns per task.
-2. **No write-conflict rule.** Parallel writing phases need disjoint files, or `isolation: worktree`.
-3. **No large-output rule.** Tell workers to write big results to a file in the scratchpad and return the path.
-4. **No CLAUDE.md propagation rule.** `scout` and `qa-runner` set `omitClaudeMd: true`, so the brief must restate any rule they need.
-5. **No runaway guard.** Add `maxTurns` to each agent definition.
-6. **No destructive-action rule.** State that push, delete, force operations, and publishing stay in the lead's thread.
-7. **No eval loop.** Keep about 20 real tasks and score the lead's routing on outcome, cost, and turns.
+Not in the command, on purpose: the eval loop from section 10. It is a practice for maintaining the command, not a rule for running it.
 
 ## Agent definitions
 
-- `scout`: tool allowlist and `omitClaudeMd` match the practice. Add `maxTurns`.
-- `qa-runner`: `disallowedTools` blocks edits. Add `maxTurns`.
-- `implementer`, `deep-reasoner`: no tool limits and CLAUDE.md loaded. Correct for writers and reasoners. Add `maxTurns` to `implementer`.
+| Agent | Tools | CLAUDE.md | Turn guard |
+|-------|-------|-----------|------------|
+| `scout` | Read, Grep, Glob, Bash | skipped | 40 |
+| `reviewer` | Read, Grep, Glob, Bash | skipped | none: review length follows the diff |
+| `qa-runner` | all but Edit, Write, NotebookEdit | skipped | 80 |
+| `implementer` | all | loaded | none: the brief bounds the files |
+| `deep-reasoner` | all | loaded | none |

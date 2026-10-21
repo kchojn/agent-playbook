@@ -1,6 +1,6 @@
 ---
 name: deep-reasoner
-description: Use for reasoning-heavy phases, architecture, debugging complex issues, and algorithm design. Returns a concise conclusion, key risks, and a concrete recommendation the orchestrator can act on.
+description: Use for design, hard debugging, algorithm design, and verifying work with many hidden edge cases by reading code. Returns a conclusion, the key risks, and a concrete recommendation. Never for manual testing or mechanical edits.
 model: opus
 effort: high
 ---

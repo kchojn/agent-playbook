@@ -5,6 +5,7 @@ model: haiku
 effort: high
 disallowedTools: Edit, Write, NotebookEdit
 omitClaudeMd: true
+maxTurns: 80
 ---
 
 Manual test agent. Follow the brief's steps exactly and record what each one showed: a screenshot, a console line, or command output. Report PASS or FAIL per step with that evidence.

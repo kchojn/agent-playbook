@@ -109,6 +109,7 @@ Cloudflare's write-up of tuning its review agents gives measured cost changes th
 - In 64% of turns the model made a single tool call. The finder now issues its independent reads together in the first turn.
 - About two-thirds of jobs were re-reviews. A re-review now covers only the commits since the reviewed head.
 - On Sonnet 5.5, high effort cost 61% more per run than medium and posted 58% more critical and warning findings, so `reviewer` runs at high effort.
+- Cloudflare strips user-controlled boundary tags from the text it reviews so a PR body cannot steer the reviewer. The context pack now marks PR text, issue text, and comments as data, and every brief that carries them says so. [AI code review at Cloudflare]
 
 ## Sources
 
@@ -134,4 +135,5 @@ Cloudflare's write-up of tuning its review agents gives measured cost changes th
 - [PatchGuru](https://arxiv.org/pdf/2602.05270), [OpenCodeReview](https://arxiv.org/abs/2608.09290)
 - [SWE-PRBench](https://arxiv.org/abs/2603.26130), [SWR-Bench](https://arxiv.org/abs/2509.01494), [Defect-focused review](https://arxiv.org/abs/2505.17928), [Refute-or-Promote](https://arxiv.org/abs/2604.19049)
 - [Obsessive inference optimization, Cloudflare](https://blog.cloudflare.com/obsessive-inference-optimization/)
+- [AI code review at Cloudflare](https://blog.cloudflare.com/ai-code-review/)
 - mattpocock-skills `code-review` skill, installed plugin cache
