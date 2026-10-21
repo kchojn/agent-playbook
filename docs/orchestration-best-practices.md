@@ -68,7 +68,9 @@ Return a fixed shape so the lead can choose the next phase without redoing the w
 
 - Synthesis, conflict resolution, and the next-phase decision stay with the lead.
 - Destructive or outward-facing actions (push, delete, force operations, publishing) stay in the main thread behind confirmation. Never delegate them.
-- A phase fails when the worker is blocked, errors, or misses "Done when". Retry on the same or a stronger model, never a cheaper one. After two failures, escalate to an independent second opinion.
+- A phase fails when the worker is blocked, errors, or misses "Done when". Retry on the same or a stronger model, never a cheaper one.
+- After two failures, or when the lead cannot choose the next phase, escalate once to a read-only agent on the most capable model, at `high` effort, with the goal, the reason behind it, what was tried, the evidence, and the open question. Anthropic's Fable 5.1 guidance recommends `high` for most tasks and `xhigh` only for the most capability-sensitive work; at higher effort on routine work the model "can gather context and deliberate beyond what the task needs", and even `low` often beats `xhigh` on earlier models. The brief states goal and constraints, not steps: prompts written for earlier models are "too prescriptive" for Fable and lower output quality. [Claude model migration guide; Effort parameter]
+- Keep a second escalation to a model from another provider for a disputed verdict. Capability and independence are different needs. [Obsessive inference optimization]
 
 ## 8. Verify the premise
 
@@ -105,6 +107,8 @@ Also from the same team: a worker that hits its time or turn limit is not a prov
 
 - [Create custom subagents - Claude Code Docs](https://code.claude.com/docs/en/sub-agents)
 - [Extend Claude with skills - Claude Code Docs](https://code.claude.com/docs/en/skills)
+- [Claude model migration guide - Claude Developer Platform](https://platform.claude.com/docs/en/about-claude/models/migration-guide)
+- [Effort parameter - Claude Developer Platform](https://platform.claude.com/docs/en/build-with-claude/effort)
 - [Best practices - Claude Code Docs](https://code.claude.com/docs/en/best-practices)
 - [Obsessive inference optimization - Cloudflare](https://blog.cloudflare.com/obsessive-inference-optimization/)
 - [AI code review at Cloudflare](https://blog.cloudflare.com/ai-code-review/)

@@ -16,7 +16,8 @@ For the rest of this session you are the lead. Delegate the work and keep the ju
 | `reviewer` | sonnet, high | read-only review of a diff: find candidate defects, or verify a list of them. Never edits. |
 | `qa-runner` | haiku, high | manual and end-to-end tests: launch the app, click through the given steps, screenshot, pass or fail. Never edits. |
 | `deep-reasoner` | opus, high | design, hard debugging, verifying work with many hidden edge cases by reading code. Never runs manual tests; it diagnoses what `qa-runner` reported. |
-| `/codex:rescue --background` | | escalation only: the same phase failed twice, or an independent opinion is wanted |
+| `oracle` | fable, high | escalation only, one call: a phase failed twice, or you cannot choose the next phase. Returns a decision and a phase plan. Never edits. |
+| `/codex:rescue --background` | | escalation only: an opinion from a different provider on a disputed verdict |
 | you | | synthesis, conflict resolution, next-phase decisions, trivial work, the final report, and every destructive or outward-facing action |
 
 - Agents set model and effort in their frontmatter. Never pass `model`, except `model: opus` to retry a failed `implementer` phase.
@@ -90,7 +91,7 @@ Enough to pick the next phase without redoing the work. No transcripts, no full 
 - Independent phases go in one message. Dependent phases wait for the earlier result.
 - Parallel writers get disjoint file sets. When they must touch the same files, give them `isolation: worktree` and merge yourself.
 - Act on **Status**. `NEEDS_CONTEXT`: supply it and resume the same worker; not a failure. `DONE_WITH_CONCERNS`: read the risks before choosing the next phase. `BLOCKED`: a failure.
-- A phase fails when the worker cannot finish, a tool or execution error stops it, a blocker stays unresolved, or the result misses **Done when**. Retry on the same or a stronger model. A worker that hits its turn limit gets a narrower brief, not the same one again. The same phase failing twice goes to `/codex:rescue --background` with the goal, the findings so far, the failure, and the open question.
+- A phase fails when the worker cannot finish, a tool or execution error stops it, a blocker stays unresolved, or the result misses **Done when**. Retry on the same or a stronger model. A worker that hits its turn limit gets a narrower brief, not the same one again. A phase that failed twice, or a next phase you cannot choose, goes once to `oracle` with the goal, the reason behind it, what was tried, the evidence, and the open question; run its plan on the normal roster. `/codex:rescue --background` when a verdict stays disputed and an opinion from a different provider would settle it.
 - Trust completed worker output. Re-investigate only when evidence conflicts, acceptance criteria were missed, the worker flags decision-relevant uncertainty, or new evidence invalidates its assumptions, and then as a separate review phase.
 - Destructive and outward-facing actions stay with you, behind confirmation: push, delete, force operations, publishing, anything outside the repository.
 - `deep-reasoner` returns a conclusion, risks, and a recommendation. Use them; do not redo the reasoning.

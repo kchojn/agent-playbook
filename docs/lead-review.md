@@ -16,6 +16,7 @@ Checked against [orchestration-best-practices.md](orchestration-best-practices.m
 | Parallel only when independent; disjoint files or a worktree for writers | Delegation rules |
 | Turn limit is not a provider failure | Delegation rules |
 | Retry never cheaper; escalate after two failures | Workers; Delegation rules |
+| Escalation to the most capable model, once, read-only; a different provider for disputes | Workers table: `oracle`, `/codex:rescue`; Delegation rules |
 | Destructive actions stay in the lead | Delegation rules |
 | Verify the premise | Verify the premise |
 | Lead keeps synthesis | Workers table: "you"; Delegation rules |
@@ -32,3 +33,4 @@ Not in the command, on purpose: the eval loop from section 10. It is a practice 
 | `qa-runner` | all but Edit, Write, NotebookEdit | skipped | 80 |
 | `implementer` | all | loaded | none: the brief bounds the files |
 | `deep-reasoner` | all | loaded | none |
+| `oracle` | Read, Grep, Glob, Bash | loaded | none: one call, long turns expected |

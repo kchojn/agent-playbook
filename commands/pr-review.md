@@ -83,7 +83,7 @@ For a large PR: list the highest-risk paths first, use one `scout` mapping phase
 | second find, all angles, files in reverse order | none | `reviewer`, in parallel |
 | verify | `reviewer`; `deep-reasoner` when any candidate is HIGH or BLOCKER | `deep-reasoner` |
 | mapping for large PRs | `scout` (haiku, medium) | `scout` |
-| escalation only, section 8 | `/codex:rescue --background` | same |
+| escalation only, section 8 | `oracle`, then `/codex:rescue --background` | same |
 
 Rules:
 
@@ -168,7 +168,7 @@ Severity decides how a finding is posted, not whether. A confirmed MEDIUM or LOW
 
 `NEEDS_CONTEXT` means supply the context and resume the same worker; it is not a failure. `BLOCKED` is a failure. Retry on the same or a stronger model, never a cheaper one.
 
-Use `/codex:rescue --background` only when a phase failed twice **and** the unresolved issue affects a HIGH or BLOCKER candidate, or the failed phase is itself high-risk and material to the merge decision. Give Codex only the claim, path, evidence, and the open question. Treat its answer as an independent opinion, not authority.
+Escalate only when a phase failed twice **and** the unresolved issue affects a HIGH or BLOCKER candidate, or the failed phase is itself high-risk and material to the merge decision. First `oracle`, once, with the claim, path, evidence, and the open question; it decides the verdict. `/codex:rescue --background` when a verdict stays disputed and an opinion from a different provider would settle it. Treat either answer as an opinion with evidence, not authority.
 
 ## 9. Dedupe against existing comments
 
