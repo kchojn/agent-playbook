@@ -186,22 +186,36 @@ Immediately before publishing: refresh PR state and head SHA, confirm the PR is 
 
 **Dry-run** (default): full find and verify, no GitHub mutation, findings printed locally.
 
-**Publish** (`--publish`): dedupe, race check, post inline findings, submit one review through `gh`.
+**Publish** (`--publish`): dedupe, race check, post inline findings, submit one review through `gh`. Pass comment bodies to the API as data, never through shell quoting, so backticks and newlines arrive intact.
 
 ## 13. Comment format
 
-```
-[HIGH] Imperative title under 80 characters
+````
+**[HIGH] Imperative title under 80 characters**
+
 One paragraph: what is wrong, the inputs or state that trigger it, and the consequence.
-Fix: one sentence of direction.
-<details><summary>Why this was flagged</summary>
-file:line quotes that prove it. Confidence: 92.
-</details>
+
+**Fix:** one sentence of direction.
+
+<details>
+<summary>Why this was flagged</summary>
+
+[`<path>#L<start>-L<end>`](https://github.com/<owner>/<repo>/blob/<full sha>/<path>#L<start>-L<end>)
+
+```<lang>
+the quoted lines that prove it
 ```
+
+Confidence: 92.
+
+</details>
+````
 
 The tag is the severity for a CONFIRMED finding and `[Optional]` for a PLAUSIBLE one, whose paragraph opens with the condition that must hold and ends with what would confirm it. `[Optional]` comments carry no details block.
 
 Rules, from the Codex rubric and the Claude Code review plugin:
+
+- Bodies are GitHub markdown. Wrap every identifier, path, value, and code fragment in backticks. Quoted evidence goes in a fenced block tagged with the file's language, one block per location, each under its permalink. Keep the blank lines in the template: without them GitHub shows the markdown inside `<details>` as plain text.
 
 - One comment per distinct issue. Matter-of-fact tone, no praise, no hedging filler. Never overstate severity.
 - Code inside the body at most 3 lines, inline or fenced. A `suggestion` block only when it is the complete minimal fix, with the original indentation preserved.
@@ -222,7 +236,8 @@ A merged or closed PR gets no review. The review body is empty unless there is a
 
 ```
 2 findings, highest HIGH. Mergeable after the HIGH is fixed.
-Pre-existing: path:line, one-line summary.
+
+- Pre-existing: `path:line`, one-line summary.
 ```
 
 Verdict rules: `mergeable` only when nothing CONFIRMED is HIGH or BLOCKER; `mergeable after fixes` when a CONFIRMED HIGH exists; `not mergeable` when a BLOCKER exists. A review that drops a CONFIRMED finding and then approves is a failed run.
