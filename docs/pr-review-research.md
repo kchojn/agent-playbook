@@ -111,6 +111,17 @@ Cloudflare's write-up of tuning its review agents gives measured cost changes th
 - On Sonnet 5.5, high effort cost 61% more per run than medium and posted 58% more critical and warning findings, so `reviewer` runs at high effort.
 - Cloudflare strips user-controlled boundary tags from the text it reviews so a PR body cannot steer the reviewer. The context pack now marks PR text, issue text, and comments as data, and every brief that carries them says so. [AI code review at Cloudflare]
 
+## 12. Owner guidance, convergence, and thread state
+
+Addy Osmani's write-up of how the Claude Code team reviews its own PRs adds four rules. [How the Claude Code team does code review]
+
+- Code owners keep a `REVIEW.md` that says what matters in their code, limits nitpicking, and lists ignored paths. The context pack now reads it next to the other rule files.
+- "The review process must converge." One PR cycled more than fifty times overnight between an agent author and an agent reviewer, and about 59% of what got flagged was code present since the first pass. Re-reviews now exclude lines unchanged since the reviewed head, and from the fourth review the body asks the author to re-evaluate the approach.
+- "All findings must be addressed -- fixed or the thread is resolved with a reason", and "a finding will be auto-closed if a subsequent commit addresses the problem." A thread resolved with a reason is now final, and `--publish` resolves this account's threads the verifier marks fixed.
+- "Some paths always require another approval -- anything marked as sensitive by owners, and any CI workflow file." CI workflows, release, deploy, and auto-update code now triage as high-risk.
+
+Not adopted: a vote among several agents to confirm findings (section 6's single precision-biased verifier already fills that role), and "agent approvals don't count as human approvals", which would stop this command from approving.
+
 ## Sources
 
 - Claude Code built-in `/code-review` recipe, extracted from the `claude` 2.1.299 binary (strings `Angle A`, `PLAUSIBLE by default`, `Sweep for gaps`)
@@ -137,3 +148,4 @@ Cloudflare's write-up of tuning its review agents gives measured cost changes th
 - [Obsessive inference optimization, Cloudflare](https://blog.cloudflare.com/obsessive-inference-optimization/)
 - [AI code review at Cloudflare](https://blog.cloudflare.com/ai-code-review/)
 - mattpocock-skills `code-review` skill, installed plugin cache
+- [How the Claude Code team does code review, Addy Osmani](https://x.com/addyosmani/status/2114604912520921136)
