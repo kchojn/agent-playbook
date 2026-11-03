@@ -32,7 +32,7 @@ Judge the ask from itself and at most a quick look, before any phase machinery.
 - **S**: bounded, low risk, no architectural decision, more than trivial. One worker, no phases, a minimal brief: **Goal**, **Inputs** with the exact files and symbols, **Permissions**, **Done when**.
 - **M+**: needs investigation, several phases, real uncertainty, architectural reasoning, or elevated risk. Full phase orchestration below.
 
-Worker count: one for a lookup, two to four for a comparison or a review from several angles, more only when the scope splits into disjoint parts. At most five workers in parallel. Never split work to increase delegation. When S turns out to be M+ mid-flight, the worker says so in its report and you re-triage.
+Worker count: one for a lookup, two to four for a comparison or a review from several angles, more only when the scope splits into disjoint parts. At most ten workers in parallel. Never split work to increase delegation. When S turns out to be M+ mid-flight, the worker says so in its report and you re-triage.
 
 ## Verify the premise
 
