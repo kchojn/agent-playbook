@@ -27,7 +27,7 @@ gh search prs --review-requested=@me --state=open --draft=false \
   --json number,url,repository,author,updatedAt --limit 100
 ```
 
-The window is since yesterday in UTC, GitHub's clock for `updated:`, so a request made just before midnight is not lost; step 3 drops what is already reviewed. Drop PRs whose author has `is_bot: true`. GitHub removes you from the requested reviewers once you submit a review and adds you back when the author re-requests one, so this list is the PRs waiting on you.
+The window is since yesterday in UTC, GitHub's clock for `updated:`; it is a cheap pre-filter that cannot miss a request from the last 24 hours, and step 3 does the exact checks. Drop PRs whose author has `is_bot: true`. GitHub removes you from the requested reviewers once you submit a review and adds you back when the author re-requests one, so this list is the PRs waiting on you.
 
 ## 3. Skip PRs already handled
 
@@ -38,6 +38,15 @@ gh pr view <number> -R <owner/repo> --json headRefOid,reviewRequests,reviews
 ```
 
 Skip it when your login (`gh api user -q .login`, fetched once per pass) is not in `reviewRequests`: the search index lags, and the request may already be gone. Skip it when a review by your login with `state` other than `PENDING` has `commit.oid` equal to `headRefOid`: that covers index lag the other way and a re-request with no new commits, which gets no second review.
+
+Then keep only requests made in the last 24 hours. The search window above is on PR activity, not on the request, so an old request on a PR that got a comment today would slip through it. The PR timeline has the exact event:
+
+```sh
+gh api repos/<owner>/<repo>/issues/<number>/timeline --paginate \
+  --jq '[.[] | select(.event=="review_requested" and .requested_reviewer.login=="<login>") | .created_at | fromdateiso8601] | max > (now - 86400)'
+```
+
+Skip the PR unless that prints `true`.
 
 ## 4. Find the clone
 
