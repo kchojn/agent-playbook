@@ -18,7 +18,7 @@ One recall-biased finder lists every candidate defect with a failure scenario; o
 
 ![The /pr-review-watch flow](docs/pr-review-watch-flow.svg)
 
-`/loop 15m /pr-review-watch` runs one pass every 15 minutes. A pass finds open PRs that asked for your review in the last 24 hours, drops the ones already reviewed at their head commit, and runs `/pr-review --publish` on the rest, each in its own `claude -p` process, so the watching session holds one line per PR and nothing lands in `/resume`. Clone roots come from the arguments or `~/.config/pr-review-watch/roots`. Source: `docs/pr-review-watch-flow.html`.
+`/loop 15m /pr-review-watch` runs one pass every 15 minutes. A pass finds open PRs that asked for your review in the last 24 hours, drops the ones already reviewed at their head commit, and runs `/pr-review --publish` on the rest, each in its own `claude -p` process, three at a time, so the watching session holds one line per PR and nothing lands in `/resume`. Clone roots come from the arguments or `~/.config/pr-review-watch/roots`. Source: `docs/pr-review-watch-flow.html`.
 
 ## Layout
 

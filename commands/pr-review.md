@@ -48,7 +48,7 @@ Never report: formatter-level style, naming taste, anything a linter, type check
 
 ## 2. Resolve target and eligibility
 
-Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components. Run from a local clone of the PR's repository. First `git fetch <remote> <base branch> pull/<number>/head`, where `<remote>` is the one whose URL is the PR's repository; the head of a fork PR is reachable only through that ref. Then `git worktree add --detach $TMPDIR/pr-review-<number> <head sha>` and give that path to every worker as the repo path: `Read` and `Grep` on the clone itself would see whatever branch or edits it has checked out. Remove the worktree when the run ends.
+Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components. Run from a local clone of the PR's repository. First `git fetch <remote> <base branch> pull/<number>/head`, where `<remote>` is the one whose URL is the PR's repository; the head of a fork PR is reachable only through that ref. When the fetch fails on a ref lock, another review of the same clone is fetching; wait five seconds and retry once. Then `git worktree add --detach $TMPDIR/pr-review-<number> <head sha>` and give that path to every worker as the repo path: `Read` and `Grep` on the clone itself would see whatever branch or edits it has checked out. Remove the worktree when the run ends.
 
 Stop with a one-line reason when the PR is merged, closed, a draft, or an automated PR from a bot or dependency updater. Stop when a review from this account already exists for the current head SHA, unless `--publish` was given and the earlier run was a dry-run.
 

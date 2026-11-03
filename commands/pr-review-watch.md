@@ -54,19 +54,20 @@ For each clone root, check each child directory's `git remote -v`. A match is a 
 
 ## 5. Start the batch
 
-When no PR remains, release the lock and print one line that says why: `no new review requests` when step 2 found none, otherwise `<n> requests, none reviewed: <m> handled, <k> without a clone under <roots>`. Otherwise start **one** background Bash command (`run_in_background`) that writes its pid to `lock/pid`, removes `lock` on exit with a `trap`, and reviews the PRs one at a time, oldest `updatedAt` first:
+When no PR remains, release the lock and print one line that says why: `no new review requests` when step 2 found none, otherwise `<n> requests, none reviewed: <m> handled, <k> without a clone under <roots>`. Otherwise start **one** background Bash command (`run_in_background`) that writes its pid to `lock/pid`, removes `lock` on exit with a `trap`, and reviews the PRs three at a time, oldest `updatedAt` first, one line per PR fed to `xargs`:
 
 ```sh
-mkdir -p ~/.cache/pr-review-watch/results/<owner>/<repo>
-(cd <clone> && timeout -k 30s 60m claude -p "/pr-review <url> --publish" \
-  --permission-mode auto --permission-prompts none \
-  --disallowedTools "Edit,Write,NotebookEdit" \
-  --strict-mcp-config --max-budget-usd 10 \
-  --no-session-persistence --output-format json) \
-  > ~/.cache/pr-review-watch/results/<owner>/<repo>/<number>.json 2> ~/.cache/pr-review-watch/results/<owner>/<repo>/<number>.err
+printf '%s\t%s\t%s\n' <clone> <url> <owner>/<repo>/<number> ... | xargs -P 3 -L 1 sh -c '
+  mkdir -p ~/.cache/pr-review-watch/results/$(dirname "$2")
+  cd "$0" && timeout -k 30s 60m claude -p "/pr-review $1 --publish" \
+    --permission-mode auto --permission-prompts none \
+    --disallowedTools "Edit,Write,NotebookEdit" \
+    --strict-mcp-config --max-budget-usd 10 \
+    --no-session-persistence --output-format json \
+    > ~/.cache/pr-review-watch/results/$2.json 2> ~/.cache/pr-review-watch/results/$2.err'
 ```
 
-Why each piece: `timeout` bounds one stuck review so the lock is not held forever (macOS gets it from coreutils); nobody answers prompts, so `--permission-prompts none` denies instead of hanging; `--disallowedTools` blocks the file-editing tools, the review's own rules cover the shell; `--strict-mcp-config` skips every MCP server, which the review does not use and which cost tokens on every call; `--max-budget-usd` caps one runaway review; `--no-session-persistence` leaves nothing in `/resume`.
+Why each piece: `-P 3` runs three reviews at once, enough to drain a morning's requests without a dozen concurrent agents hitting rate limits, and the next starts when one finishes; `timeout` bounds one stuck review so the lock is not held forever (macOS gets it from coreutils); nobody answers prompts, so `--permission-prompts none` denies instead of hanging; `--disallowedTools` blocks the file-editing tools, the review's own rules cover the shell; `--strict-mcp-config` skips every MCP server, which the review does not use and which cost tokens on every call; `--max-budget-usd` caps one runaway review; `--no-session-persistence` leaves nothing in `/resume`.
 
 One PR failing does not stop the rest. Then print `reviewing <n> PRs: <owner/repo>#<number> ...` and end the turn. Never read a review transcript into this session.
 
