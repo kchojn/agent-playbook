@@ -191,7 +191,7 @@ Immediately before publishing: refresh PR state and head SHA, confirm the PR is 
 
 **Dry-run** (default): full find and verify, no GitHub mutation, findings printed locally.
 
-**Publish** (`--publish`): dedupe, race check, resolve fixed threads, then one `gh api` call to `POST /repos/{owner}/{repo}/pulls/{number}/reviews` carrying `commit_id`, `event`, `body`, and every inline comment, so the review and its comments land together or not at all; a half-posted review would make the next run skip the missing findings. Pass the payload as a JSON file or `--input -`, never through shell quoting, so backticks and newlines arrive intact.
+**Publish** (`--publish`): dedupe, race check, resolve fixed threads, then one `gh api` call to `POST /repos/{owner}/{repo}/pulls/{number}/reviews` carrying `commit_id`, `event`, `body`, and every inline comment, so the review and its comments land together or not at all. `event` comes from the CONFIRMED findings in that payload and nothing else: `REQUEST_CHANGES` when any is HIGH or BLOCKER, `COMMENT` when any exists at MEDIUM or LOW, `APPROVE` when none. Check the payload before sending: a body that says `after the HIGH is fixed` or `not mergeable` with any event but `REQUEST_CHANGES` is a bug, do not send it; a half-posted review would make the next run skip the missing findings. Pass the payload as a JSON file or `--input -`, never through shell quoting, so backticks and newlines arrive intact.
 
 ## 13. Comment format
 
