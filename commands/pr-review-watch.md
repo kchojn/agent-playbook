@@ -1,15 +1,15 @@
 ---
 description: One pass of the review watcher; finds open PRs that request your review and runs /pr-review --publish on each in its own headless session. Run it on a timer with /loop.
-argument-hint: <clone root dir>...
+argument-hint: [clone root dir]...
 ---
 
 Run one pass of the review watcher. Start it with:
 
 ```
-/loop 5m /pr-review-watch ~/code ~/work
+/loop 5m /pr-review-watch
 ```
 
-`$ARGUMENTS` lists the directories that hold your local clones. A clone is a direct child of one of them.
+The clone roots are the directories that hold your local clones; a clone is a direct child of one of them. `$ARGUMENTS` lists them; when it is empty, read them from `~/.config/pr-review-watch/roots`, one directory per line, `~` allowed. When neither gives a root, print `no clone roots: pass directories or write ~/.config/pr-review-watch/roots` and end the pass; do nothing else.
 
 Each review runs in its own `claude -p` process with a fresh context, so this session never holds a review. It sees one summary line per PR. Never use em dashes. Keep each pass short.
 
@@ -50,11 +50,11 @@ Skip the PR unless that prints `true`.
 
 ## 4. Find the clone
 
-For each `<root>` in `$ARGUMENTS`, check each child directory's `git remote -v`. A match is a remote whose URL ends in `<owner>/<repo>` or `<owner>/<repo>.git`, over https or ssh, on `github.com`. No match: print `skip <owner/repo>#<number>: no local clone` and drop the PR. Never clone.
+For each clone root, check each child directory's `git remote -v`. A match is a remote whose URL ends in `<owner>/<repo>` or `<owner>/<repo>.git`, over https or ssh, on `github.com`. No match: print `skip <owner/repo>#<number>: no local clone` and drop the PR. Never clone.
 
 ## 5. Start the batch
 
-When no PR remains, release the lock and print `no new review requests`. Otherwise start **one** background Bash command (`run_in_background`) that writes its pid to `lock/pid`, removes `lock` on exit with a `trap`, and reviews the PRs one at a time, oldest `updatedAt` first:
+When no PR remains, release the lock and print one line that says why: `no new review requests` when step 2 found none, otherwise `<n> requests, none reviewed: <m> handled, <k> without a clone under <roots>`. Otherwise start **one** background Bash command (`run_in_background`) that writes its pid to `lock/pid`, removes `lock` on exit with a `trap`, and reviews the PRs one at a time, oldest `updatedAt` first:
 
 ```sh
 mkdir -p ~/.cache/pr-review-watch/results/<owner>/<repo>
