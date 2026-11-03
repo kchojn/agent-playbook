@@ -13,7 +13,7 @@ The clone roots are the directories that hold your local clones; a clone is a di
 
 Each review runs in its own `claude -p` process with a fresh context, so this session never holds a review. It sees one summary line per PR. Never use em dashes. Keep each pass short.
 
-State lives in `~/.cache/pr-review-watch/`: the directory `lock` exists while a batch runs and holds the batch's pid in `lock/pid`; `results/<owner>/<repo>/<number>.json` holds the last result for a PR.
+State lives in `~/.cache/pr-review-watch/`: the directory `lock` exists while a batch runs and holds the batch's pid in `lock/pid`; `results/<owner>/<repo>/<number>-<head7>.json` and `.err` hold the one attempt at that head.
 
 ## 1. Take the lock
 
@@ -37,7 +37,7 @@ For each PR:
 gh pr view <number> -R <owner/repo> --json state,isDraft,headRefOid,reviewRequests,reviews
 ```
 
-Skip it unless `state` is `OPEN` and `isDraft` is false: the search index lags, so a PR merged or closed minutes ago still shows up as open. Skip it when your login (`gh api user -q .login`, fetched once per pass) is not in `reviewRequests`: the search index lags, and the request may already be gone. Skip it when a review by your login with `state` other than `PENDING` has `commit.oid` equal to `headRefOid`: that covers index lag the other way and a re-request with no new commits, which gets no second review.
+Skip it unless `state` is `OPEN` and `isDraft` is false: the search index lags, so a PR merged or closed minutes ago still shows up as open. Skip it when your login (`gh api user -q .login`, fetched once per pass) is not in `reviewRequests`: the search index lags, and the request may already be gone. Skip it when a review by your login with `state` other than `PENDING` has `commit.oid` equal to `headRefOid`: that covers index lag the other way and a re-request with no new commits, which gets no second review. Skip it when `results/<owner>/<repo>/<number>-<head7>.json` exists: one attempt per head, so a review that failed does not run again in every batch until the author pushes.
 
 Then keep only requests made in the last 24 hours. The search window above is on PR activity, not on the request, so an old request on a PR that got a comment today would slip through it. The PR timeline has the exact event:
 
@@ -57,7 +57,7 @@ For each clone root, check each child directory's `git remote -v`. A match is a 
 When no PR remains, release the lock and print one line that says why: `no new review requests` when step 2 found none, otherwise `<n> requests, none reviewed: <m> handled, <k> without a clone under <roots>`. Otherwise start **one** background Bash command (`run_in_background`) that writes its pid to `lock/pid`, removes `lock` on exit with a `trap`, and reviews the PRs three at a time, oldest `updatedAt` first, one line per PR fed to `xargs`:
 
 ```sh
-printf '%s\t%s\t%s\n' <clone> <url> <owner>/<repo>/<number> ... | xargs -P 3 -L 1 sh -c '
+printf '%s\t%s\t%s\n' <clone> <url> <owner>/<repo>/<number>-<head7> ... | xargs -P 3 -L 1 sh -c '
   mkdir -p ~/.cache/pr-review-watch/results/$(dirname "$2")
   cd "$0" && timeout -k 30s 60m claude -p "/pr-review $1 --publish" \
     --permission-mode auto --permission-prompts none \
