@@ -52,11 +52,19 @@ Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head 
 
 Stop with a one-line reason when the PR is merged, closed, a draft, or an automated PR from a bot or dependency updater. Stop when a review from this account already exists for the current head SHA, unless `--publish` was given and the earlier run was a dry-run.
 
-**Re-review**: when this account reviewed an earlier head and that head is an ancestor of the current one, review only `<reviewed head>...<head>`. Triage that range, not the whole PR, and add to the context pack the earlier findings with whether the new commits touch their lines. A force-push, a base change, or a merge of the base that touched reviewed files means a full review.
+**Re-review**: when this account has reviewed an earlier head of this PR, that first pass was the one look at the code it covered, and this pass covers only what the author added since. Neither a rebase nor a merge of the base reopens reviewed code. Take `<reviewed>` as the full `commit_id` of this account's newest earlier review, `git fetch <remote> <reviewed>`, and list the new commits:
 
-In a re-review, lines unchanged since the earlier reviewed head are out of scope, even inside a touched function, unless a new commit re-exposes them. Earlier passes already read that code; finding a few more old bugs on every cycle keeps a review loop from ending.
+```sh
+git rev-list --no-merges --right-only --cherry-pick <reviewed>...<head> ^<remote>/<base branch>
+```
 
-**Cycle limit**: count this account's reviews of earlier heads of this PR. From the fourth review onward, post only CONFIRMED findings, no `[Optional]` comments, and open the review body with one sentence asking the author to re-evaluate the approach instead of patching finding by finding.
+`--cherry-pick` drops a commit the author only rebased, so a force-push keeps its scope; `^<remote>/<base branch>` drops what a merge of the base brought in. When the list is empty, nothing the author wrote has changed since the last review: stop with that one line and post nothing. When `<reviewed>` cannot be fetched, run a full review and say so under `Residual risk`.
+
+The scope is the lines those commits add or change. Triage that scope, not the whole PR. Brief the finder with the patches of those commits, `git show --format=%h <sha>` for each, in place of the PR diff; the finder reads enclosing functions, callers, and callees to judge the new lines, not to hunt in them. Before verification, check every candidate's anchor with `git blame -s -L <start>,<end> <head> -- <path>`. A candidate whose blamed commit is not in the list is out of scope: drop it unless the finder quoted the new line that changes what the old line does, a value it reads, a callee's return or contract, a guard before it, a default, and the failure scenario needs that change. An out-of-scope CONFIRMED BLOCKER gets one line under `Pre-existing`; nothing else out of scope is posted, and the dry-run `Dropped:` list names it with verdict `OUT_OF_SCOPE`. Earlier passes read that code once; finding a few more old bugs on every cycle is what keeps a review loop from ending.
+
+Add to the context pack this account's earlier findings and, per finding, whether a new commit touches its lines; the verifier marks each `FIXED` or `OPEN`.
+
+**Cycle limit**: count this account's reviews of earlier heads of this PR. From the third review onward, post only CONFIRMED findings at MEDIUM or above: no LOW, no `[Optional]`. From the fourth, also open the review body with one sentence asking the author to re-evaluate the approach instead of patching finding by finding.
 
 Collect the context pack cheaply, from metadata, not by reading the whole diff:
 
@@ -106,7 +114,7 @@ The finder is **recall-biased**. Its brief:
 - **Goal**: surface every candidate defect this PR introduces, re-exposes, or worsens.
 - **Inputs**: repo path, base and head SHA, changed files, the context pack from section 2, the triage tier, any `--focus` text, and the category list and never-report list from section 1.
 - **Permissions**: read-only. `git diff base...head`, `Read`, `Grep`, `git log`, `git blame`, `gh api` for prior review comments. No builds, no test runs.
-- **Rules**: in your first response, issue every independent read at once: the diff, each governing rule file, and the PR's linked issues. One tool call per turn rereads the whole context each time. Read every hunk, then the enclosing function of every hunk. Bugs in unchanged lines of a touched function are in scope when the PR re-exposes them. Read the functions and call sites a hunk touches, not whole files; recall drops as unrelated context grows. Work through every angle below in order, in one context. Up to 6 candidates per angle, up to 8 on high-risk. Pass every candidate that has a nameable failure scenario; the verifier judges it, not you. Do not let one angle's conclusion suppress another's. Do not pad to a number.
+- **Rules**: in your first response, issue every independent read at once: the diff, each governing rule file, and the PR's linked issues. One tool call per turn rereads the whole context each time. Read every hunk, then the enclosing function of every hunk. In a first review, bugs in unchanged lines of a touched function are in scope when the PR re-exposes them. In a re-review, the diff is the patches of the new commits from section 2, and a candidate anchors on a line one of them adds or changes; a defect seen on an older line goes in the report under `Out of scope`, one line each, with the new line that re-exposes it when there is one. Read the functions and call sites a hunk touches, not whole files; recall drops as unrelated context grows. Work through every angle below in order, in one context. Up to 6 candidates per angle, up to 8 on high-risk. Pass every candidate that has a nameable failure scenario; the verifier judges it, not you. Do not let one angle's conclusion suppress another's. Do not pad to a number.
 - **Done when**: every angle has run on every changed path, the gap sweep has run, and each candidate carries the fields below.
 - **Return**: first line `Status: DONE | DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED`. Then per candidate: `id`, `category`, provisional severity, `file`, smallest changed line or range at the head SHA, one-sentence `summary`, `failure_scenario` as concrete inputs or state leading to the wrong output, crash, or cost, `evidence` as quoted lines with `file:line`, and `why_pr` stating how this PR causes it. For conventions, quote the rule and its file. For spec mismatch, quote the PR or issue text.
 
@@ -129,7 +137,7 @@ Then the **gap sweep**: re-read the diff and the enclosing functions as a fresh 
 
 ## 6. Phase 2: verify
 
-Dedupe candidates first: same line and mechanism, or same root cause with several symptoms, keep the one with the most concrete failure scenario. Note when two finders raised the same candidate.
+Dedupe candidates first: same line and mechanism, or same root cause with several symptoms, keep the one with the most concrete failure scenario. Note when two finders raised the same candidate. In a re-review, apply the blame check from section 2 here, before anything reaches the verifier.
 
 Send every remaining candidate to **one** verifier in a single brief, never one worker per candidate. On a re-review the same brief carries this account's open findings from earlier heads whose lines the new commits touch; the verifier marks each `FIXED` or `OPEN`. Skip the verifier only when there are no candidates, or every candidate is a conventions finding whose quoted rule and line the lead can check directly.
 
@@ -270,6 +278,7 @@ Highest: <severity or none>
 Verdict: <as in section 14>
 PR: #<number>
 Head: <short sha>
+Scope: first review | re-review since <short sha>, <n> commits
 Tier: trivial | normal | high-risk | large
 Workers: <count>
 Candidates: <found> / <after dedupe> / <accepted> / <dropped>

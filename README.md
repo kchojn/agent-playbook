@@ -12,7 +12,7 @@ Trivial work stays with the lead. Everything else runs as bounded phases: define
 
 ![The /pr-review flow](docs/pr-review-flow.svg)
 
-One recall-biased finder lists every candidate defect with a failure scenario; one precision-biased verifier tries to disprove each and must cite `file:line`. Only CONFIRMED findings post as findings and set the review event; PLAUSIBLE ones with confidence 70 or more post as `[Optional]`. Dry-run by default; `--publish` posts one GitHub review with the comments inside it. Sources for every rule: `docs/pr-review-research.md`. Source: `docs/pr-review-flow.html`.
+One recall-biased finder lists every candidate defect with a failure scenario; one precision-biased verifier tries to disprove each and must cite `file:line`. Only CONFIRMED findings post as findings and set the review event; PLAUSIBLE ones with confidence 70 or more post as `[Optional]`. A re-review covers only the commits the author added since the last reviewed head: a rebase or a merge of the base does not reopen reviewed code, and from the third round only MEDIUM and above post. Dry-run by default; `--publish` posts one GitHub review with the comments inside it. Sources for every rule: `docs/pr-review-research.md`. Source: `docs/pr-review-flow.html`.
 
 ## How `/pr-review-watch` runs
 

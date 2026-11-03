@@ -158,6 +158,28 @@ A Codex pass over the two command files, before any watcher run, found gaps a ru
 
 Not adopted: tracking re-requests without new commits as a new review (the review at that head already exists); scaling severity down for rare triggers (section 7 argues the opposite); AGENTS.override.md discovery (Codex-specific).
 
+## 16. Convergence on a real PR
+
+Fifth lesson from a run: a 53-file PR got four reviews from this command in 21 hours, and the author asked for the ping-pong to stop. Matching each finding's lines to the commit that wrote them: rounds 1 to 3 flagged code present since the first commit, and only round 4 flagged the previous fix. The rule that unchanged lines are out of scope was in the command the whole time. Two clauses got around it. Round 2 ran after a force-push and round 3 after a merge of the base branch, and the text made both a full review. The finder brief also admitted "bugs in unchanged lines of a touched function", so a fix that touched a function reopened the whole function.
+
+What the sources do:
+
+- Anthropic's internal reviewer had the same failure: of what later rounds flagged, "about 59% of it was code that had been there since the reviewer's first pass." Fixes: "A round cap. After three rounds, the reviewer asks the author to step back"; "Diff-only re-review after the first few passes"; "No repeats of findings already posted"; a finding "clears on its own" when a later commit fixes it. PRs with five or more rounds fell from 8.9% to 1.5%, and mean reviews to pass from 2.08 to 1.32. [Solving code review at Anthropic]
+- Claude Code's cloud review: a review after a push "focuses on what changed since the last review and posts fewer nits and pre-existing findings"; the body names what is "outside the scope of this re-review and not posted"; the next review "resolves its earlier thread when it judges the issue fixed"; a push with no new changes repeats nothing. [Claude Code docs, reviewing pull requests]
+- Cursor Bugbot: "By default, Bugbot reviews only the changes since the previous Bugbot review" (`incremental: true`), and its pipeline ends with "Dedupe against bugs posted from previous runs." [Bugbot docs; Building Bugbot]
+- CodeRabbit re-runs on each push and pauses automatic reviews after five reviewed commits. Greptile marks a comment addressed when a push touches its file and keeps unresolved findings in the summary. Copilot re-reviews only when configured to and "may repeat the same comments again". Codex posts only P0 and P1. None of them says whether it comments on unchanged lines. [CodeRabbit configuration; Greptile changelog; Copilot code review docs; Codex on GitHub]
+- Google: approve "once it is in a state where it definitely improves" code health, "even if the CL isn't perfect". [Google eng-practices, standard]
+- Two practitioner loops: "the reviewer reads only the commits since its last review, plus the code they touch", with a ledger of posted findings and exits on a round cap or no new blocking finding; and "the loop needs a cap, because a reviewer that is asked often enough will always find something." [How to make an agentic loop converge; Agentic code review loop]
+
+Adopted in section 2, each step tested on the PR above:
+
+- The new commits are `git rev-list --no-merges --right-only --cherry-pick <reviewed>...<head> ^<remote>/<base>`. `--cherry-pick` drops a commit the author only rebased; `^<base>` drops what a base merge brought in. Across the force-push it listed the 7 fix commits and not the rebased first commit; across the base merge it listed 9 author commits where the two-dot range held 55. A rebase or a base merge is no longer a full review, and an empty list ends the run.
+- The finder gets the patches of those commits, not the PR diff, and reads enclosing functions to judge the new lines. Before verification, `git blame -s -L` at the head decides whether a candidate's line is new; on the PR above it put round 4's anchor on the fix commit and rounds 2 and 3's targets on original commits.
+- An out-of-scope candidate is dropped unless the finder quotes the new line that changes what the old line does. A CONFIRMED BLOCKER gets one `Pre-existing` line.
+- From the third review only CONFIRMED MEDIUM and above post; the fourth asks the author to step back, as Anthropic's cap does.
+
+Not adopted: naming out-of-scope findings in the body as the cloud review does, since a count with no detail starts a thread without giving the author anything to act on; Greptile's rule that a push touching a file resolves its comment, which closes threads the fix did not address.
+
 ## Sources
 
 - Claude Code built-in `/code-review` recipe, extracted from the `claude` 2.1.299 binary (strings `Angle A`, `PLAUSIBLE by default`, `Sweep for gaps`)
@@ -191,3 +213,9 @@ Not adopted: tracking re-requests without new commits as a new review (the revie
 - [GitHub docs, collapsed sections](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/organizing-information-with-collapsed-sections), [commenting on a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/commenting-on-a-pull-request), [basic formatting syntax, alerts](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)
 - [Conventional Comments](https://conventionalcomments.org)
 - [Claude Code docs: headless](https://code.claude.com/docs/en/headless), [CLI reference](https://code.claude.com/docs/en/cli-reference), [permission modes](https://code.claude.com/docs/en/permission-modes), [scheduled tasks](https://code.claude.com/docs/en/scheduled-tasks), [skills](https://code.claude.com/docs/en/skills)
+- [Solving code review at Anthropic](https://claude.dev/blog/solving-code-review-at-anthropic/)
+- [Claude Code docs, reviewing pull requests](https://code.claude.com/docs/en/code-review-pull-requests)
+- [Bugbot docs](https://cursor.com/docs/bugbot)
+- [Greptile changelog](https://www.greptile.com/changelog), [memory and learning](https://www.greptile.com/docs/how-greptile-works/memory-and-learning)
+- [Copilot code review docs](https://docs.github.com/en/copilot/using-github-copilot/code-review/using-copilot-code-review)
+- [How to make an agentic loop converge in AI code review](https://dev.to/uss/how-to-make-an-agentic-loop-converge-in-ai-code-review-4i1c), [Agentic code review loop, Robin Wieruch](https://www.robinwieruch.de/agentic-code-review-loop/)
