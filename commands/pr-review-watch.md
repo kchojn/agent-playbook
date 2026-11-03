@@ -6,7 +6,7 @@ argument-hint: [clone root dir]...
 Run one pass of the review watcher. Start it with:
 
 ```
-/loop 5m /pr-review-watch
+/loop 15m /pr-review-watch
 ```
 
 The clone roots are the directories that hold your local clones; a clone is a direct child of one of them. `$ARGUMENTS` lists them; when it is empty, read them from `~/.config/pr-review-watch/roots`, one directory per line, `~` allowed. When neither gives a root, print `no clone roots: pass directories or write ~/.config/pr-review-watch/roots` and end the pass; do nothing else.
