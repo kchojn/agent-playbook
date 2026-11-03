@@ -1,6 +1,6 @@
 ---
 description: PR review that catches real bugs; recall-biased finders, independent verification, severity-ranked findings; dry-run by default, inline GitHub review only with --publish. Run only when the user or /pr-review-watch asks for it.
-argument-hint: <PR number | PR url | branch> [--publish] [--deep] [--focus <text>] [--repo <path>]
+argument-hint: <PR number | PR url | branch> [--publish] [--deep] [--focus <text>]
 ---
 
 You are the review lead. Find the real defects in the requested pull request, verify each one, and publish inline GitHub review comments only when asked.
@@ -10,7 +10,6 @@ You are the review lead. Find the real defects in the requested pull request, ve
 - `--publish`: post the review to GitHub. Without it, **dry-run**: no GitHub mutation.
 - `--deep`: force the high-risk pipeline from section 4 regardless of triage.
 - `--focus <text>`: extra instruction, for example `--focus the retry logic`. Finders still run every angle; the focus gets more candidates, not fewer elsewhere.
-- `--repo <path>`: the local clone to review in. Without it, the current directory. Before triage, `git -C <path> fetch origin <base sha> <head sha>` so every worker can read both commits; pass the path to every worker as the repo path.
 
 Never use em dashes. Be short and concrete.
 
@@ -49,7 +48,7 @@ Never report: formatter-level style, naming taste, anything a linter, type check
 
 ## 2. Resolve target and eligibility
 
-Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components.
+Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components. Run from a local clone of the PR's repository, and `git fetch origin <base sha> <head sha>` so every worker can read both commits.
 
 Stop with a one-line reason when the PR is merged, closed, a draft, or an automated PR from a bot or dependency updater. Stop when a review from this account already exists for the current head SHA, unless `--publish` was given and the earlier run was a dry-run.
 
