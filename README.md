@@ -12,7 +12,7 @@ Trivial work stays with the lead. Everything else runs as bounded phases: define
 
 | Path | Contents |
 |------|----------|
-| `commands/` | Slash commands (`lead`, `pr-review`). Copy to `~/.claude/commands/`. |
+| `commands/` | Slash commands (`lead`, `pr-review`, `pr-review-watch`). Copy to `~/.claude/commands/`. |
 | `agents/` | Subagent definitions (`scout`, `qa-runner`, `implementer`, `reviewer`, `deep-reasoner`, `oracle`). Copy to `~/.claude/agents/`. |
 | `docs/orchestration-best-practices.md` | Sourced rules for delegation, model routing, briefs, and evals. |
 | `docs/lead-review.md` | `/lead` checked against those rules, with gaps. |

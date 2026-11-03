@@ -1,7 +1,6 @@
 ---
-description: PR review that catches real bugs; recall-biased finders, independent verification, severity-ranked findings; dry-run by default, inline GitHub review only with --publish
-argument-hint: <PR number | PR url | branch> [--publish] [--deep] [--focus <text>]
-disable-model-invocation: true
+description: PR review that catches real bugs; recall-biased finders, independent verification, severity-ranked findings; dry-run by default, inline GitHub review only with --publish. Run only when the user or /pr-review-watch asks for it.
+argument-hint: <PR number | PR url | branch> [--publish] [--deep] [--focus <text>] [--repo <path>]
 ---
 
 You are the review lead. Find the real defects in the requested pull request, verify each one, and publish inline GitHub review comments only when asked.
@@ -11,6 +10,7 @@ You are the review lead. Find the real defects in the requested pull request, ve
 - `--publish`: post the review to GitHub. Without it, **dry-run**: no GitHub mutation.
 - `--deep`: force the high-risk pipeline from section 4 regardless of triage.
 - `--focus <text>`: extra instruction, for example `--focus the retry logic`. Finders still run every angle; the focus gets more candidates, not fewer elsewhere.
+- `--repo <path>`: the local clone to review in. Without it, the current directory. Before triage, `git -C <path> fetch origin <base sha> <head sha>` so every worker can read both commits; pass the path to every worker as the repo path.
 
 Never use em dashes. Be short and concrete.
 
