@@ -1,5 +1,5 @@
 ---
-description: One pass of the review watcher; finds today's open PRs that request your review and runs /pr-review --publish on each in its own headless session. Run it on a timer with /loop.
+description: One pass of the review watcher; finds open PRs that request your review and runs /pr-review --publish on each in its own headless session. Run it on a timer with /loop.
 argument-hint: <clone root dir>...
 ---
 
@@ -13,44 +13,51 @@ Run one pass of the review watcher. Start it with:
 
 Each review runs in its own `claude -p` process with a fresh context, so this session never holds a review. It sees one summary line per PR. Never use em dashes. Keep each pass short.
 
-State lives in `~/.cache/pr-review-watch/`: `lock` holds the pid of a running batch, and `<owner>-<repo>-<number>.json` holds the last result for a PR.
+State lives in `~/.cache/pr-review-watch/`: the directory `lock` exists while a batch runs and holds the batch's pid in `lock/pid`; `results/<owner>/<repo>/<number>.json` holds the last result for a PR.
 
-## 1. Skip while a batch runs
+## 1. Take the lock
 
-If `lock` exists and `kill -0` on its pid succeeds, print `review batch running` and end the pass. A stale `lock` from a dead pid is removed.
+`mkdir ~/.cache/pr-review-watch/lock` is the lock: `mkdir` either creates it or fails, with no gap between the check and the claim. When it fails, read `lock/pid`; if `kill -0` on that pid succeeds, print `review batch running` and end the pass; if not, the batch died, so `rm -r lock` and take it again. Release the lock with `rm -r lock` at the end of a pass that starts no batch.
 
 ## 2. Find requests
 
 ```sh
-gh search prs --review-requested=@me --state=open --draft=false --updated=">=$(date +%F)" \
-  --json number,url,repository,author,updatedAt --limit 50
+gh search prs --review-requested=@me --state=open --draft=false \
+  --updated=">=$(date -u -v-1d +%F 2>/dev/null || date -u -d yesterday +%F)" \
+  --json number,url,repository,author,updatedAt --limit 100
 ```
 
-Drop PRs whose author has `is_bot: true`. GitHub removes you from the requested reviewers once you submit a review and adds you back when the author re-requests one, so this list is the PRs waiting on you.
+The window is since yesterday in UTC, GitHub's clock for `updated:`, so a request made just before midnight is not lost; step 3 drops what is already reviewed. Drop PRs whose author has `is_bot: true`. GitHub removes you from the requested reviewers once you submit a review and adds you back when the author re-requests one, so this list is the PRs waiting on you.
 
 ## 3. Skip PRs already handled
 
 For each PR:
 
 ```sh
-gh pr view <number> -R <owner/repo> --json headRefOid,reviews
+gh pr view <number> -R <owner/repo> --json headRefOid,reviewRequests,reviews
 ```
 
-Skip it when a review by your login (`gh api user -q .login`, fetched once per pass) has `commit.oid` equal to `headRefOid`. That covers GitHub's search index lag and a re-request with no new commits.
+Skip it when your login (`gh api user -q .login`, fetched once per pass) is not in `reviewRequests`: the search index lags, and the request may already be gone. Skip it when a review by your login with `state` other than `PENDING` has `commit.oid` equal to `headRefOid`: that covers index lag the other way and a re-request with no new commits, which gets no second review.
 
 ## 4. Find the clone
 
-For each `<root>` in `$ARGUMENTS`, check each child directory's `git remote get-url origin`. A match ends in `<owner>/<repo>` or `<owner>/<repo>.git`, over https or ssh. No match: print `skip <owner/repo>#<number>: no local clone` and drop the PR. Never clone.
+For each `<root>` in `$ARGUMENTS`, check each child directory's `git remote -v`. A match is a remote whose URL ends in `<owner>/<repo>` or `<owner>/<repo>.git`, over https or ssh, on `github.com`. No match: print `skip <owner/repo>#<number>: no local clone` and drop the PR. Never clone.
 
 ## 5. Start the batch
 
-When PRs remain, start **one** background Bash command (`run_in_background`) that creates `~/.cache/pr-review-watch/`, writes its pid to `lock`, removes `lock` on exit with a `trap`, and reviews the PRs one at a time, oldest `updatedAt` first:
+When no PR remains, release the lock and print `no new review requests`. Otherwise start **one** background Bash command (`run_in_background`) that writes its pid to `lock/pid`, removes `lock` on exit with a `trap`, and reviews the PRs one at a time, oldest `updatedAt` first:
 
 ```sh
-(cd <clone> && claude -p "/pr-review <url> --publish" \
-  --permission-mode auto --no-session-persistence --output-format json) \
-  > ~/.cache/pr-review-watch/<owner>-<repo>-<number>.json
+mkdir -p ~/.cache/pr-review-watch/results/<owner>/<repo>
+(cd <clone> && timeout -k 30s 60m claude -p "/pr-review <url> --publish" \
+  --permission-mode auto --permission-prompts none \
+  --disallowedTools "Edit,Write,NotebookEdit" \
+  --strict-mcp-config --max-budget-usd 10 \
+  --no-session-persistence --output-format json) \
+  > ~/.cache/pr-review-watch/results/<owner>/<repo>/<number>.json 2> ~/.cache/pr-review-watch/results/<owner>/<repo>/<number>.err
 ```
+
+Why each piece: `timeout` bounds one stuck review so the lock is not held forever (macOS gets it from coreutils); nobody answers prompts, so `--permission-prompts none` denies instead of hanging; `--disallowedTools` blocks the file-editing tools, the review's own rules cover the shell; `--strict-mcp-config` skips every MCP server, which the review does not use and which cost tokens on every call; `--max-budget-usd` caps one runaway review; `--no-session-persistence` leaves nothing in `/resume`.
 
 One PR failing does not stop the rest. Then print `reviewing <n> PRs: <owner/repo>#<number> ...` and end the turn. Never read a review transcript into this session.
 
@@ -62,6 +69,4 @@ When the background command's completion notice arrives, read only the `Review:`
 <owner/repo>#<number>: <Review event>, <findings> findings, highest <severity or none>
 ```
 
-When `.result` has none of those lines, `/pr-review` stopped early, for example on a draft; print its first line. When `is_error` is true, print `failed <owner/repo>#<number>` and the file path.
-
-When nothing qualified in steps 2 to 4, print only `no new review requests` and end the turn.
+When the file is not valid JSON or `is_error` is true, print `failed <owner/repo>#<number>` and the paths of the `.json` and `.err` files. When `.result` has none of those lines, `/pr-review` stopped early, for example on a draft; print its first line.

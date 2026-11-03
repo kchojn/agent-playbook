@@ -122,6 +122,42 @@ Addy Osmani's write-up of how the Claude Code team reviews its own PRs adds four
 
 Not adopted: a vote among several agents to confirm findings (section 6's single precision-biased verifier already fills that role), and "agent approvals don't count as human approvals", which would stop this command from approving.
 
+## 13. A comment a maintainer can scan
+
+What the published tools put in an inline comment, and what readers complain about.
+
+- Codex: a `[P1]`-style tag opens an imperative title of at most 80 characters; the body is one paragraph that states the scenario the bug needs; code chunks at most 3 lines; no praise; severity never overstated. A `suggestion` block only for concrete replacement code with the exact leading whitespace and no commentary inside. [Codex rubric.md; Codex review prompt]
+- Anthropic's plugin: one comment per issue, a link with the full commit SHA and one line of context on each side, a committable suggestion only for small self-contained fixes and never for 6 or more lines or multi-location changes. [claude-plugins-official code-review]
+- Anthropic's cloud review folds the evidence into a collapsed "Why this was flagged" section. [Claude Code review docs]
+- CodeRabbit and Greptile fold their long content (committable suggestion, "prompt for AI agents"); PostHog turned the agent-prompt block off because it restated the finding. Reviews of both tools name verbosity as the main complaint. [CodeRabbit config; PostHog #105516; cubic, "How AI code review works"]
+- GitHub: markdown inside `<details>` needs a blank line after `<summary>` and before `</details>`; a suggestion applies only to lines in the diff and cannot be applied on a deleted line; alerts (`> [!WARNING]`) are meant for one or two per page and their rendering in review comments is undocumented. [GitHub docs, collapsed sections; GitHub docs, commenting on a PR]
+- Conventional Comments: one label, at most one decoration, never stacked. [conventionalcomments.org]
+
+Adopted in section 13: the paragraph and fix line must stand alone; the fold is a fixed three-line list, `Trigger`, `Effect`, `Checked`, then the permalink and quoted lines, so the proof reads the same on every comment; optional `Also affected`, `Rule`, and `Spec` lines; the suggestion cutoff at 6 lines and diff lines only; no alerts, no footer.
+
+## 14. Unattended runs
+
+`/pr-review-watch` runs each review as its own `claude -p` process, from the Claude Code docs on headless mode and scheduled tasks.
+
+- A prompt that starts with `/skill-name` expands the skill in `-p`; `--bare` would skip custom commands. [Claude Code docs, headless]
+- `--permission-prompts none` denies anything that would prompt instead of hanging; `--disallowedTools` is the hard form of a "never edit" rule; `--strict-mcp-config` skips every configured MCP server; `--max-budget-usd` stops a run at an estimated spend; `--no-session-persistence` keeps the run out of `/resume`. [Claude Code docs, CLI reference and permission modes]
+- Tools a worker cannot use still cost tokens and calls, which is the reason for `--strict-mcp-config` and `--disallowedTools` rather than prose. [Obsessive inference optimization, Cloudflare]
+- `/loop` passes a skill as its prompt only when the skill is model-invocable; `disable-model-invocation: true` turns the fire into plain text. A loop fires only between turns and expires after seven days. [Claude Code docs, scheduled tasks]
+- A subagent cannot start subagents, so a `context: fork` skill cannot run the finder and verifier; a separate process can. [Claude Code docs, subagents]
+
+## 15. What a second reader found in the prompt
+
+A Codex pass over the two command files, before any watcher run, found gaps a run would have hit. Adopted:
+
+- Workers read the clone's working tree, not the PR head: `Read` and `Grep` on a clone checked out elsewhere review the wrong code. The lead now adds a detached worktree at the head SHA and briefs every worker with that path.
+- An empty finding list from a finder that returned `BLOCKED` looked like a clean PR and could approve. A run with an unfinished phase now publishes nothing.
+- A re-review counted only the findings of the new range, so a push that ignored an earlier HIGH earned an APPROVE. Earlier findings now stay CONFIRMED until the verifier marks them `FIXED`.
+- Posting comments one by one could leave a half-published review that the next run treats as done. The review and its comments now go in one `POST .../pulls/{number}/reviews` call.
+- Two PLAUSIBLE gates overlapped at HIGH; merged into one.
+- The watcher's lock was check-then-write; `mkdir` is atomic. A review request can be withdrawn while the search index still lists it; the watcher now checks live `reviewRequests`. A `PENDING` review at the head counted as done; it no longer does. The daily window now starts yesterday UTC so a request just before midnight is not lost. One stuck review held the lock forever; `timeout` now bounds it.
+
+Not adopted: tracking re-requests without new commits as a new review (the review at that head already exists); scaling severity down for rare triggers (section 7 argues the opposite); AGENTS.override.md discovery (Codex-specific).
+
 ## Sources
 
 - Claude Code built-in `/code-review` recipe, extracted from the `claude` 2.1.299 binary (strings `Angle A`, `PLAUSIBLE by default`, `Sweep for gaps`)
@@ -149,3 +185,9 @@ Not adopted: a vote among several agents to confirm findings (section 6's single
 - [AI code review at Cloudflare](https://blog.cloudflare.com/ai-code-review/)
 - mattpocock-skills `code-review` skill, installed plugin cache
 - [How the Claude Code team does code review, Addy Osmani](https://x.com/addyosmani/status/2114604912520921136)
+- [Codex review prompt, public copy](https://gist.github.com/cbh123/ce4893a10ed2b87a89d9114b08118a08), [Codex on GitHub](https://learn.chatgpt.com/docs/third-party/github)
+- [CodeRabbit configuration reference](https://docs.coderabbit.ai/reference/configuration), [PostHog #105516](https://github.com/PostHog/posthog/pull/105516), [How AI code review works, cubic](https://www.cubic.dev/blog/how-ai-code-review-works)
+- [Greptile, your first PR review](https://www.greptile.com/docs/code-review/first-pr-review)
+- [GitHub docs, collapsed sections](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/organizing-information-with-collapsed-sections), [commenting on a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/commenting-on-a-pull-request), [basic formatting syntax, alerts](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax)
+- [Conventional Comments](https://conventionalcomments.org)
+- [Claude Code docs: headless](https://code.claude.com/docs/en/headless), [CLI reference](https://code.claude.com/docs/en/cli-reference), [permission modes](https://code.claude.com/docs/en/permission-modes), [scheduled tasks](https://code.claude.com/docs/en/scheduled-tasks), [skills](https://code.claude.com/docs/en/skills)

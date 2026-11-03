@@ -15,7 +15,7 @@ Never use em dashes. Be short and concrete.
 
 ## Permissions
 
-Allowed: read repository files, PR metadata, diff, CI status, review comments, and git history; run one existing test when it settles a HIGH or BLOCKER candidate, and for a bug-fix PR run the PR's own new test in a temporary worktree at the base SHA; publish review comments, and resolve this account's own fixed threads, only with `--publish`.
+Allowed: read repository files, PR metadata, diff, CI status, review comments, and git history; fetch the PR and add detached worktrees under `$TMPDIR` for the head and, for a bug-fix PR, the base; run one existing test when it settles a HIGH or BLOCKER candidate, and for a bug-fix PR the PR's own new test in the base worktree; publish review comments, and resolve this account's own fixed threads, only with `--publish`.
 
 Never: edit files, commit, push, merge, apply fixes, run builds, linters, or type checks. CI runs those.
 
@@ -48,7 +48,7 @@ Never report: formatter-level style, naming taste, anything a linter, type check
 
 ## 2. Resolve target and eligibility
 
-Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components. Run from a local clone of the PR's repository, and `git fetch origin <base sha> <head sha>` so every worker can read both commits.
+Use `gh` for every GitHub call. Determine repository, PR number, base SHA, head SHA, changed files, diffstat, languages, and affected components. Run from a local clone of the PR's repository. First `git fetch <remote> <base branch> pull/<number>/head`, where `<remote>` is the one whose URL is the PR's repository; the head of a fork PR is reachable only through that ref. Then `git worktree add --detach $TMPDIR/pr-review-<number> <head sha>` and give that path to every worker as the repo path: `Read` and `Grep` on the clone itself would see whatever branch or edits it has checked out. Remove the worktree when the run ends.
 
 Stop with a one-line reason when the PR is merged, closed, a draft, or an automated PR from a bot or dependency updater. Stop when a review from this account already exists for the current head SHA, unless `--publish` was given and the earlier run was a dry-run.
 
@@ -133,7 +133,7 @@ Dedupe candidates first: same line and mechanism, or same root cause with severa
 
 Send every remaining candidate to **one** verifier in a single brief, never one worker per candidate. On a re-review the same brief carries this account's open findings from earlier heads whose lines the new commits touch; the verifier marks each `FIXED` or `OPEN`. Skip the verifier only when there are no candidates, or every candidate is a conventions finding whose quoted rule and line the lead can check directly.
 
-The verifier is **precision-biased** and tries to **disprove** each claim. It reads the changed code, callers and callees, guards, tests, and base behavior when needed. Every behavioral claim it keeps must rest on code it read, cited as `file:line`; a claim inferred from a name or a comment is not evidence. It may run one Grep-style check or one existing test when that settles a HIGH or BLOCKER candidate. For a bug-fix PR it runs the PR's new test in a temporary worktree at the base SHA and reports whether it fails there; a test that passes on the base does not prove the fix.
+The verifier is **precision-biased** and tries to **disprove** each claim. It reads the changed code, callers and callees, guards, tests, and base behavior when needed. Every behavioral claim it keeps must rest on code it read, cited as `file:line`; a claim inferred from a name or a comment is not evidence. It may run one Grep-style check or one existing test when that settles a HIGH or BLOCKER candidate. For a bug-fix PR the lead adds a second worktree at the base SHA and names it in the brief; the verifier copies the PR's test files over it and runs the new test there: a failure proves the test sees the bug, a pass means the test does not prove the fix, and a setup error (import, fixture, build) proves nothing and is reported as such.
 
 Verdict per candidate, exactly one:
 
@@ -154,8 +154,7 @@ Two things never lower confidence or severity: the code has no callers yet, and 
 Acceptance gate for a finding to be reported or published:
 
 - CONFIRMED, any severity. A CONFIRMED verdict already implies confidence 75 or more; if it does not, the verifier has misjudged one of them and re-states both.
-- PLAUSIBLE with severity HIGH or BLOCKER and confidence at least 70; the comment then opens with the condition that must hold.
-- PLAUSIBLE with severity MEDIUM and confidence at least 60, or PLAUSIBLE at any severity with confidence at least 70: posted inline on its line, tagged `[Optional]`, never blocking, at most five per review, highest confidence first. The comment opens with the condition that must hold.
+- PLAUSIBLE with confidence at least 70, or at least 60 when severity is MEDIUM or higher: posted inline on its line, tagged `[Optional]`, never blocking, at most five per review, highest confidence first. The comment opens with the condition that must hold.
 
 Everything else is dropped. Dry-run output lists dropped candidates in one line each so the user can calibrate the pipeline. Never verify the same candidate twice; never publish raw candidates.
 
@@ -170,7 +169,7 @@ Severity decides how a finding is posted, not whether. A confirmed MEDIUM or LOW
 
 ## 8. Escalation
 
-`NEEDS_CONTEXT` means supply the context and resume the same worker; it is not a failure. `BLOCKED` is a failure. Retry on the same or a stronger model, never a cheaper one.
+`NEEDS_CONTEXT` means supply the context and resume the same worker; it is not a failure. `BLOCKED` is a failure. Retry on the same or a stronger model, never a cheaper one. A run whose finder or verifier never completed publishes nothing and approves nothing: it reports the failed phase under `Residual risk`, because an empty finding list from a worker that did not finish is not a clean PR.
 
 Escalate only when a phase failed twice **and** the unresolved issue affects a HIGH or BLOCKER candidate, or the failed phase is itself high-risk and material to the merge decision. First `oracle`, once, with the claim, path, evidence, and the open question; it decides the verdict. `/codex:rescue --background` when a verdict stays disputed and an opinion from a different provider would settle it. Treat either answer as an opinion with evidence, not authority.
 
@@ -186,13 +185,13 @@ Every inline comment targets the **current head SHA**, with line numbers from th
 
 ## 11. Race check
 
-Immediately before publishing: refresh PR state and head SHA, confirm the PR is open, and compare with the reviewed head. If the head moved, do not publish stale comments. Re-check only the findings whose files changed; restart the whole review only when the new diff is materially different.
+Immediately before publishing: refresh PR state and head SHA, confirm the PR is open, and compare with the reviewed head. If the head moved, do not publish stale comments. Re-check only the findings whose own file changed or whose evidence cites a file that changed, and refresh their line anchors and permalinks; restart the whole review only when the new diff is materially different.
 
 ## 12. Modes
 
 **Dry-run** (default): full find and verify, no GitHub mutation, findings printed locally.
 
-**Publish** (`--publish`): dedupe, race check, resolve fixed threads, post inline findings, submit one review through `gh`. Pass comment bodies to the API as data, never through shell quoting, so backticks and newlines arrive intact.
+**Publish** (`--publish`): dedupe, race check, resolve fixed threads, then one `gh api` call to `POST /repos/{owner}/{repo}/pulls/{number}/reviews` carrying `commit_id`, `event`, `body`, and every inline comment, so the review and its comments land together or not at all; a half-posted review would make the next run skip the missing findings. Pass the payload as a JSON file or `--input -`, never through shell quoting, so backticks and newlines arrive intact.
 
 ## 13. Comment format
 
@@ -206,32 +205,41 @@ One paragraph: what is wrong, the inputs or state that trigger it, and the conse
 <details>
 <summary>Why this was flagged</summary>
 
+- **Trigger:** the concrete input or state, for example `items` is empty.
+- **Effect:** the wrong output, crash, or cost, for example `total` is `NaN` and the order is saved with it.
+- **Checked:** what the verifier read or ran and what it showed, for example read `applyDiscount()` and both callers; `test_total_empty` fails at base `abc1234` and passes at head.
+
 [`<path>#L<start>-L<end>`](https://github.com/<owner>/<repo>/blob/<full sha>/<path>#L<start>-L<end>)
 
 ```<lang>
 the quoted lines that prove it
 ```
 
-Confidence: 92.
+Confidence 92/100 that the defect is real.
 
 </details>
 ````
 
 The tag is the severity for a CONFIRMED finding and `[Optional]` for a PLAUSIBLE one, whose paragraph opens with the condition that must hold and ends with what would confirm it. `[Optional]` comments carry no details block.
 
-Rules, from the Codex rubric and the Claude Code review plugin:
+The paragraph and the fix line must stand on their own: a maintainer who never opens the fold knows what breaks, when, and what to do. The fold holds the proof. Its three lines are fixed; after `Checked`, add each of these that applies, in this order:
+
+- `**Also affected:**` a permalink to each other place the defect provably reaches, one clause each, for cross-file findings.
+- `**Rule:**` the rule file and the quoted rule, for conventions findings.
+- `**Spec:**` the quoted PR or issue text, for spec mismatch findings.
+
+Rules, from the Codex rubric, the Claude Code review plugin, and GitHub's formatting docs:
 
 - Bodies are GitHub markdown. Wrap every identifier, path, value, and code fragment in backticks. Quoted evidence goes in a fenced block tagged with the file's language, one block per location, each under its permalink. Keep the blank lines in the template: without them GitHub shows the markdown inside `<details>` as plain text.
-
-- One comment per distinct issue. Matter-of-fact tone, no praise, no hedging filler. Never overstate severity.
-- Code inside the body at most 3 lines, inline or fenced. A `suggestion` block only when it is the complete minimal fix, with the original indentation preserved.
-- A conventions finding names the rule file and quotes the rule.
-- No worker names, routing internals, or probabilities other than the confidence line. No em dashes.
-- Link code with the full head SHA: `https://github.com/<owner>/<repo>/blob/<full sha>/<path>#L<start>-L<end>`.
+- One comment per distinct issue. Matter-of-fact tone, no praise, no hedging filler, no restating the code. Never overstate severity: say what the trigger depends on.
+- Three length limits: code in the paragraph at most 3 lines; a `suggestion` block at most 5 lines; each evidence block in the fold the proving lines plus one line of context on each side, at most 10 lines.
+- A `suggestion` block only when it is the complete fix, on lines the diff adds or keeps, with the original indentation and no commentary inside. GitHub cannot apply a suggestion on a deleted line or outside the diff. Otherwise the fix line describes the change.
+- No worker names, routing internals, or probabilities other than the confidence line. No GitHub alerts (`> [!WARNING]`), no footer, no em dashes.
+- Link code with the full head SHA: `https://github.com/<owner>/<repo>/blob/<full sha>/<path>#L<start>-L<end>`, the same range as the evidence block under it.
 
 ## 14. Submission policy
 
-The event follows the CONFIRMED findings only; `[Optional]` comments never change it.
+The event follows the CONFIRMED findings only; `[Optional]` comments never change it. In a re-review, this account's earlier findings count as CONFIRMED now unless the verifier marked them `FIXED`; a finding whose lines no new commit touched is still `OPEN` without re-verification, so a push that ignores a HIGH never earns an APPROVE.
 
 - No CONFIRMED findings: APPROVE.
 - LOW only: COMMENT.
