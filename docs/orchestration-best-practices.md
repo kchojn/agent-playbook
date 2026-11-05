@@ -71,6 +71,7 @@ Return a fixed shape so the lead can choose the next phase without redoing the w
 - A phase fails when the worker is blocked, errors, or misses "Done when". Retry on the same or a stronger model, never a cheaper one.
 - After two failures, or when the lead cannot choose the next phase, escalate once to a read-only agent on the most capable model, at `high` effort, with the goal, the reason behind it, what was tried, the evidence, and the open question. Anthropic's Fable 5.1 guidance recommends `high` for most tasks and `xhigh` only for the most capability-sensitive work; at higher effort on routine work the model "can gather context and deliberate beyond what the task needs", and even `low` often beats `xhigh` on earlier models. The brief states goal and constraints, not steps: prompts written for earlier models are "too prescriptive" for Fable and lower output quality. [Claude model migration guide; Effort parameter]
 - Keep a second escalation to a model from another provider for a disputed verdict. Capability and independence are different needs. [Obsessive inference optimization]
+- Call the second provider directly, read-only. The Codex plugin's `/codex:rescue` hands the request to a Sonnet subagent whose only job is to forward it, and that subagent adds `--write` unless the request asks for read-only work; an opinion on a verdict needs neither the extra model nor write access. In a run on 2026-10-02 the forwarder stopped after the sandbox refused the call (the companion keeps its job log outside the sandbox's writable paths), and the lead reported a block that was not one. One Bash call to the plugin's companion script, with the sandbox off and without `--write`, avoids both. [Codex plugin for Claude Code]
 
 ## 8. Verify the premise
 
@@ -112,6 +113,7 @@ Also from the same team: a worker that hits its time or turn limit is not a prov
 - [Best practices - Claude Code Docs](https://code.claude.com/docs/en/best-practices)
 - [Obsessive inference optimization - Cloudflare](https://blog.cloudflare.com/obsessive-inference-optimization/)
 - [AI code review at Cloudflare](https://blog.cloudflare.com/ai-code-review/)
+- [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc), version 1.0.6: `agents/codex-rescue.md` (the forwarding subagent and its `--write` default), `scripts/codex-companion.mjs` (`task [--background] [--write]`, `result [job-id]`)
 - [How we built our multi-agent research system - Anthropic](https://www.anthropic.com/engineering/multi-agent-research-system)
 - [Building effective agents - Anthropic](https://www.anthropic.com/engineering/building-effective-agents)
 - [Claude Code subagents and multi-agent orchestration guide - Konishi](https://hidekazu-konishi.com/entry/claude_code_subagents_and_orchestration_guide.html)

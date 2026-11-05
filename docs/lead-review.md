@@ -16,7 +16,8 @@ Checked against [orchestration-best-practices.md](orchestration-best-practices.m
 | Parallel only when independent; disjoint files or a worktree for writers | Delegation rules |
 | Turn limit is not a provider failure | Delegation rules |
 | Retry never cheaper; escalate after two failures | Workers; Delegation rules |
-| Escalation to the most capable model, once, read-only; a different provider for disputes | Workers table: `oracle`, `/codex:rescue`; Delegation rules |
+| Escalation to the most capable model, once, read-only; a different provider for disputes | Workers table: `oracle`, Codex companion script; Delegation rules |
+| The second provider is called directly and read-only, not through a forwarding subagent | Delegation rules: the failure rule's last two sentences |
 | Destructive actions stay in the lead | Delegation rules |
 | Verify the premise | Verify the premise |
 | Lead keeps synthesis | Workers table: "you"; Delegation rules |

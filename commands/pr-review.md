@@ -95,7 +95,7 @@ For a large PR: list the highest-risk paths first, use one `scout` mapping phase
 | second find, all angles, files in reverse order | none | `reviewer`, in parallel |
 | verify | `reviewer`; `deep-reasoner` when any candidate is HIGH or BLOCKER | `deep-reasoner` |
 | mapping for large PRs | `scout` (haiku, medium) | `scout` |
-| escalation only, section 8 | `oracle`, then `/codex:rescue --background` | same |
+| escalation only, section 8 | `oracle`, then the Codex companion script | same |
 
 Rules:
 
@@ -179,7 +179,7 @@ Severity decides how a finding is posted, not whether. A confirmed MEDIUM or LOW
 
 `NEEDS_CONTEXT` means supply the context and resume the same worker; it is not a failure. `BLOCKED` is a failure. Retry on the same or a stronger model, never a cheaper one. A run whose finder or verifier never completed publishes nothing and approves nothing: it reports the failed phase under `Residual risk`, because an empty finding list from a worker that did not finish is not a clean PR.
 
-Escalate only when a phase failed twice **and** the unresolved issue affects a HIGH or BLOCKER candidate, or the failed phase is itself high-risk and material to the merge decision. First `oracle`, once, with the claim, path, evidence, and the open question; it decides the verdict. `/codex:rescue --background` when a verdict stays disputed and an opinion from a different provider would settle it. Treat either answer as an opinion with evidence, not authority.
+Escalate only when a phase failed twice **and** the unresolved issue affects a HIGH or BLOCKER candidate, or the failed phase is itself high-risk and material to the merge decision. First `oracle`, once, with the claim, path, evidence, and the open question; it decides the verdict. When a verdict stays disputed and an opinion from a different provider would settle it, ask Codex in one Bash call with the sandbox off: `node ~/.claude/plugins/cache/openai-codex/codex/<version>/scripts/codex-companion.mjs task --background "<prompt>"`, then `result <id>` from the same directory. Never pass `--write`, and never go through `/codex:rescue`: it adds a forwarding subagent and a write-capable default. Treat either answer as an opinion with evidence, not authority.
 
 ## 9. Dedupe against existing comments
 
