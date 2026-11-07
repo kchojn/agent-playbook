@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `oracle` description now opens with "Use when".
 - The retry rule names the stronger worker.
 - The review event for a MEDIUM finding follows the submission policy, so a MEDIUM whose impact blocks merge can request changes.
+- From the third review round, a round whose only confirmed findings are LOW posts a comment review with their count instead of approving.
 - The review event is defined once, in the submission policy section.
 - The finder brief uses the shared brief vocabulary and the bare status token.
 - The research doc marks superseded gates and records limits that were set without a measurement.
