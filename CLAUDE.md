@@ -13,7 +13,7 @@ Prompt files for Claude Code, packaged as the `tradecraft` plugin (its own marke
 - The only test is a real run: `/tradecraft:lead <task>`, `/tradecraft:pr-review <pr>` (dry-run by default: prints findings and dropped candidates, touches nothing on GitHub), `/tradecraft:pr-review-watch`. Headless: `claude -p "/tradecraft:pr-review <url>"`.
 - Watcher state lives in `~/.cache/pr-review-watch/` (the `lock` directory and one result file per PR head); clone roots in `~/.config/pr-review-watch/roots`.
 - Frontmatter is the contract. Agents use `name`, `description`, `model`, `effort`, `tools`, `disallowedTools`, `omitClaudeMd`, `maxTurns`. Skills use `description`, `argument-hint`, `disable-model-invocation`. Unknown fields are ignored silently, so a typo turns a rule off with no warning. An agent `description` is a routing rule: open with "Use for" or "Use when".
-- Commit scopes are the skill names: `feat(pr-review)`, `fix(pr-review-watch)`, `feat(lead)`, `docs(readme)`.
+- Commit scopes are the skill names: `feat(pr-review)`, `fix(pr-review-watch)`, `feat(lead)`, `docs(readme)`. PRs land by squash merge, so the PR title is the commit.
 - ASCII only, no em dashes anywhere, including inside the prompts and the flowcharts.
 
 ## How the pieces fit
@@ -34,3 +34,13 @@ Three layers, each checked against the one below it.
 - Every user-visible change adds a line under `## [Unreleased]` in `CHANGELOG.md`.
 - `/tradecraft:pr-review` sections refer to each other by number. Keep the numbers stable or fix every reference.
 - `/tradecraft:pr-review-watch` must stay model-invocable: `/loop` fires a skill only without `disable-model-invocation`.
+
+## Releasing
+
+A merge to `main` that leaves entries under `## [Unreleased]` gets a release in the same session, without asking. A merge that adds no changelog entry gets none.
+
+1. Pick the version from the entries. `### Added` or `### Changed` bumps minor; `### Fixed` alone bumps patch. Before 1.0 a breaking change (a renamed command, agent or state path) also bumps minor and its line says so.
+2. On a `chore/release-vX.Y.Z` branch: move the entries to `## [X.Y.Z] - YYYY-MM-DD`, add its compare link at the foot of `CHANGELOG.md` and repoint the `[Unreleased]` link, and set `version` in `.claude-plugin/plugin.json`. Commit as `chore(release): vX.Y.Z`, open a PR, squash-merge it.
+3. Tag the squash commit `vX.Y.Z` (annotated) and push the tag. Create the GitHub release from the changelog section: `gh release create vX.Y.Z --title vX.Y.Z --notes-file <section>`.
+
+The marketplace entry has no `version`, so `/plugin update` follows `main`; the tag and release serve readers and the changelog links.

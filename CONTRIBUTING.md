@@ -30,3 +30,10 @@ candidates and touches nothing on GitHub.
   `fix(pr-review): ...` or `feat(lead): ...`, or `readme` and `docs` for those files. Use `type: imperative summary` when
   no scope fits.
 - Branches read `type/kebab-case-summary`, for example `fix/watcher-lock-path`.
+- PRs land by squash merge, so the PR title becomes the commit on `main`.
+
+## Releasing
+
+The maintainer cuts a release after a merge that leaves entries under `## [Unreleased]`: a `chore(release): vX.Y.Z` PR
+that moves the entries to a dated section and bumps `version` in `.claude-plugin/plugin.json`, then a `vX.Y.Z` tag and a
+GitHub release with that section as its notes. Contributors leave the version alone.
