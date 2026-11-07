@@ -185,7 +185,7 @@ Adopted in section 2, each step tested on the PR above:
 - The new commits are `git rev-list --no-merges --right-only --cherry-pick <reviewed>...<head> ^<remote>/<base>`. `--cherry-pick` drops a commit the author only rebased; `^<base>` drops what a base merge brought in. Across the force-push it listed the 7 fix commits and not the rebased first commit; across the base merge it listed 9 author commits where the two-dot range held 55. A rebase or a base merge is no longer a full review, and an empty list ends the run.
 - The finder gets the patches of those commits, not the PR diff, and reads enclosing functions to judge the new lines. Before verification, `git blame -s -L` at the head decides whether a candidate's line is new; on the PR above it put round 4's anchor on the fix commit and rounds 2 and 3's targets on original commits.
 - An out-of-scope candidate is dropped unless the finder quotes the new line that changes what the old line does. A CONFIRMED BLOCKER gets one `Pre-existing` line.
-- From the third review only CONFIRMED MEDIUM and above post; the fourth asks the author to step back, as Anthropic's cap does.
+- From the third review only CONFIRMED MEDIUM and above post; the fourth asks the author to step back, as Anthropic's cap does. A LOW-only round posts COMMENT with no inline comments and a count, because section 14 of the skill forbids dropping a confirmed finding behind an approval. [opinion]
 
 Not adopted: naming out-of-scope findings in the body as the cloud review does, since a count with no detail starts a thread without giving the author anything to act on; Greptile's rule that a push touching a file resolves its comment, which closes threads the fix did not address.
 

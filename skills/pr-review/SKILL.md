@@ -64,7 +64,7 @@ The scope is the lines those commits add or change. Triage that scope, not the w
 
 Add to the context pack this account's earlier findings and, per finding, whether a new commit touches its lines; the verifier marks each `FIXED` or `OPEN`.
 
-**Cycle limit**: count this account's reviews of earlier heads of this PR. From the third review onward, post only CONFIRMED findings at MEDIUM or above: no LOW, no `[Optional]`. From the fourth, also open the review body with one sentence asking the author to re-evaluate the approach instead of patching finding by finding.
+**Cycle limit**: count this account's reviews of earlier heads of this PR. From the third review onward, post only CONFIRMED findings at MEDIUM or above: no LOW, no `[Optional]`. When such a round has CONFIRMED findings at LOW only, post COMMENT with no inline comments and one body line, `<n> LOW findings not reposted from the third round; see the earlier reviews`, so the cycle limit never hides a confirmed finding behind an approval. From the fourth, also open the review body with one sentence asking the author to re-evaluate the approach instead of patching finding by finding.
 
 Collect the context pack cheaply, from metadata, not by reading the whole diff:
 
@@ -258,7 +258,7 @@ Rules, from the Codex rubric, the Claude Code review plugin, and GitHub's format
 
 The event follows the CONFIRMED findings only; `[Optional]` comments never change it. In a re-review, this account's earlier findings count as CONFIRMED now unless the verifier marked them `FIXED`; a finding whose lines no new commit touched is still `OPEN` without re-verification, so a push that ignores a HIGH never earns an APPROVE.
 
-- No CONFIRMED findings: APPROVE.
+- No CONFIRMED findings: APPROVE. A LOW-only round from the third review onward posts COMMENT as section 2 says.
 - LOW only: COMMENT.
 - MEDIUM: COMMENT by default; REQUEST_CHANGES only when the concrete impact should block merge and the evidence rules out speculation.
 - HIGH or BLOCKER: REQUEST_CHANGES.
