@@ -1,6 +1,6 @@
 # PR review research
 
-What the strongest published review systems do to catch real bugs without noise, and which of it `/pr-review` adopts. Each rule cites its source. Vendor numbers are self-reported unless marked otherwise.
+What the strongest published review systems do to catch real bugs without noise, and which of it `/tradecraft:pr-review` adopts. Each rule cites its source. Vendor numbers are self-reported unless marked otherwise.
 
 ## 1. Split finding from judging
 
@@ -14,13 +14,15 @@ Adopted: section 5 (recall-biased finder, every candidate with a failure scenari
 
 ## 2. Precision over recall for anything published
 
-- OpenAI: "Precision is more important for usability than recall." A finding is worth surfacing when P(correct) × cost saved exceeds the cost of human verification plus P(incorrect) × cost of a false alarm. Stylistic comments "may even incur negative utility." [Verifying code at scale]
+- OpenAI: "Precision is more important for usability than recall." A finding is worth surfacing when P(correct) x cost saved exceeds the cost of human verification plus P(incorrect) x cost of a false alarm. Stylistic comments "may even incur negative utility." [Verifying code at scale]
 - Greptile audited its comments: 19% good, 2% wrong, 79% nits. Prompting against nits also cut critical comments, and an LLM judge scoring 1 to 10 was "nearly random". What worked was blocking comments similar to three or more previously downvoted ones; address rate went from 19% to over 55%. [Make LLMs shut up]
 - Qodo: exclusion lists failed; a single positive instruction, "only give suggestions that address major problems and bugs", with an empty list allowed, raised acceptance 50%. [Less is more]
 - Google AutoCommenter: 80% of candidate comments landed on unmodified lines; restricting to changed lines cut the share of files commented from 6% to 1.3%. Suppressing 17 non-actionable categories raised the useful ratio from 54% to 66%. [AutoCommenter, arXiv 2405.13565]
 - Anthropic cloud review reports under 1% of findings marked incorrect, and tunes nits with a cap of five per review. [Claude Code review docs]
 
 Adopted: section 1 opens with the positive bar ("problems a maintainer would fix") and allows an empty list; the never-report list follows. Section 7 caps LOW findings at five. Section 6 gates publication at CONFIRMED with confidence 80, or PLAUSIBLE at HIGH or BLOCKER with confidence 70. Section 9 dedupes against earlier comments; angle H skips complaints the author already answered as intentional.
+
+Superseded: the gate in `skills/pr-review/SKILL.md` section 6 posts CONFIRMED at any severity, and PLAUSIBLE as `[Optional]` inline when confidence is at least 70, or at least 60 when severity is MEDIUM or higher.
 
 ## 3. The bar for a finding
 
@@ -47,7 +49,7 @@ Adopted: angles A to L and the gap sweep in section 5; the verifier's Grep or si
 
 ## 5. Severity, confidence, and the comment
 
-- Codex priorities: P0 "only for universal issues that do not depend on any assumptions about the inputs", then P1 urgent, P2 normal, P3 nice to have. Comments are one paragraph, code under four lines, range under ten lines, and must "clearly and explicitly communicate the scenarios, environments, or inputs that are necessary for the bug to arise". No praise. An overall verdict, "patch is correct" or "patch is incorrect", ignores nits. GitHub shows only P0 and P1. [Codex rubric.md; Codex cloud docs]
+- Codex priorities: P0 "only for universal issues that do not depend on any assumptions about the inputs", then P1 urgent, P2 normal, P3 nice to have. Comments are one paragraph, code under four lines, range of at most 10 lines, and must "clearly and explicitly communicate the scenarios, environments, or inputs that are necessary for the bug to arise". No praise. An overall verdict, "patch is correct" or "patch is incorrect", ignores nits. GitHub shows only P0 and P1. [Codex rubric.md; Codex cloud docs]
 - Anthropic's plugin scoring anchors: 0 false positive or pre-existing; 25 possibly real but unverified; 50 verified but minor or rare; 75 verified and likely hit in practice; 100 certain and frequent with direct evidence. Links use the full SHA with context lines. [claude-plugins-official code-review]
 - Claude Code's verifier verdicts: CONFIRMED (name inputs and wrong output, quote the line), PLAUSIBLE (mechanism real, trigger uncertain), REFUTED only when "constructible from the code". "PLAUSIBLE by default" for races, rare-path nils, boundary off-by-ones, partial failures. [Claude Code binary, code-review recipe]
 - Anthropic cloud review posts a collapsed "Why this was flagged" section with the evidence. [Claude Code review docs]
@@ -65,6 +67,8 @@ Adopted: sections 6, 7, 13, 14, and the `Residual risk` line in section 16.
 
 Implication: the verifier keeps PLAUSIBLE findings at HIGH and BLOCKER rather than demanding proof, and may run one test to settle them. The dry-run `Dropped:` list in section 16 exists so the gate can be tuned on real PRs rather than trusted.
 
+Superseded: the verifier keeps PLAUSIBLE findings by the confidence floors in `skills/pr-review/SKILL.md` section 6 (70, or 60 at MEDIUM or higher), whatever the severity.
+
 ## 7. Confidence is not severity
 
 Lesson from the first run on a real PR: the verifier CONFIRMED a write-back bug that broke two promises in the PR's own comments, quoted the lines, then scored it 65 because the new store had no callers yet. The gate read 65 as "unsure it exists" and the run approved the PR. The cause was the rubric copied from Anthropic's plugin, whose 50 and 75 anchors mix "rare or minor" with "verified".
@@ -77,15 +81,18 @@ What the sources do:
 - Anthropic's cloud review posts low-severity findings inline as "Nit: a minor issue, worth fixing but not blocking", caps them at five in its example config, and "findings are tagged by severity and don't approve or block your PR." [Claude Code review docs]
 - Google: "Consider labeling the severity of your comments, differentiating required changes from guidelines or suggestions", with `Nit:`, `Optional:`, and `FYI:` prefixes, and reviewers "should favor approving a CL once it is in a state where it definitely improves the overall code health." [Google eng-practices, comments and standard]
 - Counterpoint: Codex on GitHub "flags only P0 and P1 issues so review comments stay focused on high-priority risks." Where P2 and P3 go is not documented. [Codex cloud docs]
-- No source covers new code with no callers. The rule that unused code gets no discount is this playbook's own, from the run above: the author would still fix it, which is the Codex bar.
+- No source covers new code with no callers. The rule that unused code gets no discount is this repo's own, from the run above: the author would still fix it, which is the Codex bar.
 
 Adopted: section 6 scores confidence on existence only; every CONFIRMED finding is posted, with severity deciding blocking versus non-blocking; PLAUSIBLE MEDIUM items go in the review body, not inline; a confirmed violation of a contract the PR itself states is at least HIGH; a run that drops a CONFIRMED finding and approves is a failed run.
+
+Superseded: PLAUSIBLE items no longer go in the review body. Section 10 of this document records the move to inline `[Optional]` comments, and `skills/pr-review/SKILL.md` section 6 holds the current gate.
 
 ## 8. Plausible findings and the review body
 
 Second run on a real PR: the verifier marked a key mismatch between a draft check and the act that executes it as PLAUSIBLE, LOW, confidence 70, and the gate dropped it because PLAUSIBLE LOW had no path out. The mechanism was real: the preview shows the attached file, the executed call creates a document without it. Two fixes follow.
 
 - Any PLAUSIBLE item with confidence 70 or more now reaches the review body, capped at five lines, never inline. The body list costs the author one glance; inline plausible nits are where Greptile measured 79% of comments as unwanted. [Make LLMs shut up]
+  Superseded: plausible items post inline as `[Optional]`, as section 10 of this document records; `skills/pr-review/SKILL.md` section 6 holds the current gate.
 - A silent divergence between what the user is shown and what is executed is at least MEDIUM. The Codex rubric's bar, "the author of the original PR would likely fix the issue", applies regardless of how narrow the triggering input is. [Codex rubric.md]
 
 ## 9. Bug-fix PRs and private rules
@@ -105,10 +112,10 @@ Fourth run: an approval with no confirmed findings carried a body of status line
 Cloudflare's write-up of tuning its review agents gives measured cost changes that carry over. [Obsessive inference optimization, Cloudflare]
 
 - Workers on the same model share a prompt cache only when their requests open with the same text. Cloudflare moved repo-specific text after a shared prefix and saw first-request cache reads rise from 14-26% to 91-99.5%. Briefs now open with the shared rules and context pack, and the worker's own part comes last.
-- Tools a worker cannot use still cost tokens and calls: sub-reviewers that could see the comment-posting tool tried it in 57-76% of sessions. Finders and verifiers now run on a read-only `reviewer` agent instead of `general-purpose`.
+- Tools a worker cannot use still cost tokens and calls: sub-reviewers that could see the comment-posting tool tried it in 57-76% of sessions. Finders and verifiers now run on the `reviewer` agent, or on `deep-reasoner` for the high-risk tier, instead of `general-purpose`. Both agents are read-only.
 - In 64% of turns the model made a single tool call. The finder now issues its independent reads together in the first turn.
 - About two-thirds of jobs were re-reviews. A re-review now covers only the commits since the reviewed head.
-- On Sonnet 5.5, high effort cost 61% more per run than medium and posted 58% more critical and warning findings, so `reviewer` runs at high effort.
+- On Sonnet 5.5, high effort cost 61% more per run than medium and posted 58% more critical and warning findings, so `reviewer` runs at high effort. [unverified: no run or commit records the 61% and 58% figures]
 - Cloudflare strips user-controlled boundary tags from the text it reviews so a PR body cannot steer the reviewer. The context pack now marks PR text, issue text, and comments as data, and every brief that carries them says so. [AI code review at Cloudflare]
 
 ## 12. Owner guidance, convergence, and thread state
@@ -133,17 +140,19 @@ What the published tools put in an inline comment, and what readers complain abo
 - GitHub: markdown inside `<details>` needs a blank line after `<summary>` and before `</details>`; a suggestion applies only to lines in the diff and cannot be applied on a deleted line; alerts (`> [!WARNING]`) are meant for one or two per page and their rendering in review comments is undocumented. [GitHub docs, collapsed sections; GitHub docs, commenting on a PR]
 - Conventional Comments: one label, at most one decoration, never stacked. [conventionalcomments.org]
 
-Adopted in section 13: the paragraph and fix line must stand alone; the fold is a fixed three-line list, `Trigger`, `Effect`, `Checked`, then the permalink and quoted lines, so the proof reads the same on every comment; optional `Also affected`, `Rule`, and `Spec` lines; the suggestion cutoff at 6 lines and diff lines only; no alerts, no footer.
+Adopted in section 13: the paragraph and fix line must stand alone; the fold is a fixed three-line list, `Trigger`, `Effect`, `Checked`, then the permalink and quoted lines, so the proof reads the same on every comment; optional `Also affected`, `Rule`, and `Spec` lines; a suggestion block of at most 5 lines and on diff lines only; no alerts, no footer.
 
 ## 14. Unattended runs
 
-`/pr-review-watch` runs each review as its own `claude -p` process, from the Claude Code docs on headless mode and scheduled tasks.
+`/tradecraft:pr-review-watch` runs each review as its own `claude -p` process, from the Claude Code docs on headless mode and scheduled tasks.
 
 - A prompt that starts with `/skill-name` expands the skill in `-p`; `--bare` would skip custom commands. [Claude Code docs, headless]
 - `--permission-prompts none` denies anything that would prompt instead of hanging; `--disallowedTools` is the hard form of a "never edit" rule; `--strict-mcp-config` skips every configured MCP server; `--max-budget-usd` stops a run at an estimated spend; `--no-session-persistence` keeps the run out of `/resume`. [Claude Code docs, CLI reference and permission modes]
 - Tools a worker cannot use still cost tokens and calls, which is the reason for `--strict-mcp-config` and `--disallowedTools` rather than prose. [Obsessive inference optimization, Cloudflare]
 - `/loop` passes a skill as its prompt only when the skill is model-invocable; `disable-model-invocation: true` turns the fire into plain text. A loop fires only between turns and expires after seven days. [Claude Code docs, scheduled tasks]
 - A subagent cannot start subagents, so a `context: fork` skill cannot run the finder and verifier; a separate process can. [Claude Code docs, subagents]
+- The lock directory exists before the batch writes `lock/pid`. A second pass in that gap finds no pid, and reading that as a dead batch would remove a live lock, so a pid-less lock younger than ten minutes counts as live. [opinion: derived from steps 1 and 5 of `skills/pr-review-watch/SKILL.md`; the ten-minute bound is unmeasured]
+- The Codex step for a disputed verdict follows `docs/orchestration-best-practices.md` section 7, so this document and that one together cover every rule in the command.
 
 ## 15. What a second reader found in the prompt
 
@@ -179,6 +188,15 @@ Adopted in section 2, each step tested on the PR above:
 - From the third review only CONFIRMED MEDIUM and above post; the fourth asks the author to step back, as Anthropic's cap does.
 
 Not adopted: naming out-of-scope findings in the body as the cloud review does, since a count with no detail starts a thread without giving the author anything to act on; Greptile's rule that a push touching a file resolves its comment, which closes threads the fix did not address.
+
+## 17. Limits set without a measurement
+
+These values in the skills have no cited source and no recorded run. Dates come from `git log -S`. No commit message gives a reason for any of them.
+
+- Confidence floor of 60 for PLAUSIBLE at MEDIUM or higher (`skills/pr-review/SKILL.md` section 6). Set 2026-10-14, reworded into the single gate 2026-11-03. No measured source; change it when a run shows a better value.
+- `Up to 6 candidates per angle, up to 8 on high-risk`, and the gap sweep's `up to 8` (`skills/pr-review/SKILL.md` section 5). Set 2026-10-14. No measured source; change it when a run shows a better value.
+- Watcher `-P 3` (three reviews at once). Set 2026-11-03. The skill gives a reason, enough to drain a morning's requests without hitting rate limits, but no measurement. No measured source; change it when a run shows a better value.
+- Watcher `60m` timeout per review and `--max-budget-usd 10` per review (`skills/pr-review-watch/SKILL.md`). Both set 2026-11-03. No measured source; change it when a run shows a better value.
 
 ## Sources
 

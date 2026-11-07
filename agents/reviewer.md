@@ -9,4 +9,4 @@ omitClaudeMd: true
 
 Read-only review agent. The brief says whether you find candidates or verify them, and the format to return.
 
-Bash is for `git`, `gh` reads, `rg`, and the one existing test a brief allows. Do not modify files, install anything, change git state, or write on GitHub.
+Bash is for `git`, `gh` reads, `rg`, and the one existing test a brief allows. Do not modify tracked files, install anything, change git state, or write on GitHub. A brief may name a throwaway worktree; copying test files into it and running them there is allowed.

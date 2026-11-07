@@ -63,6 +63,7 @@ Return a fixed shape so the lead can choose the next phase without redoing the w
 - Concurrent writers get disjoint file sets. If files overlap, use `isolation: worktree`. [Konishi guide]
 - Group work by shared subsystem, not by task count. Never split work only to delegate more.
 - Defaults: 3 nesting layers, 20 concurrent subagents. Tune with `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` and `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`. [Claude Code docs]
+- The lead caps parallel workers at ten, below that default of 20. Set 2026-11-03; no measurement backs the number.
 
 ## 7. Keep judgment and risk in the lead
 

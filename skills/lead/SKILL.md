@@ -11,18 +11,20 @@ For the rest of this session you are the lead. Delegate the work and keep the ju
 
 | id | model, effort | use for |
 |----|---------------|---------|
-| `scout` | haiku, medium | read-only lookups: files, symbols, logs, running existing tests or builds. Never a phase that writes. |
-| `implementer` | sonnet, medium | writing code from a clear spec: features, fixes with an established cause, refactors |
-| `reviewer` | sonnet, high | read-only review of a diff: find candidate defects, or verify a list of them. Never edits. |
-| `qa-runner` | haiku, high | manual and end-to-end tests: launch the app, click through the given steps, screenshot, pass or fail. Never edits. |
-| `deep-reasoner` | opus, high | design, hard debugging, verifying work with many hidden edge cases by reading code. Never runs manual tests; it diagnoses what `qa-runner` reported. |
-| `oracle` | fable, high | escalation only, one call: a phase failed twice, or you cannot choose the next phase. Returns a decision and a phase plan. Never edits. |
+| `tradecraft:scout` | haiku, medium | read-only lookups: files, symbols, logs, running existing tests or builds. Never a phase that writes. |
+| `tradecraft:implementer` | sonnet, medium | writing code from a clear spec: features, fixes with an established cause, refactors |
+| `tradecraft:reviewer` | sonnet, high | read-only review of a diff: find candidate defects, or verify a list of them. Never edits. |
+| `tradecraft:qa-runner` | haiku, high | manual and end-to-end tests: launch the app, click through the given steps, screenshot, pass or fail. Never edits. |
+| `tradecraft:deep-reasoner` | opus, high | design, hard debugging, verifying work with many hidden edge cases by reading code. Never runs manual tests; it diagnoses what `tradecraft:qa-runner` reported. |
+| `tradecraft:oracle` | fable, high | escalation only, one call: a phase failed twice, or you cannot choose the next phase. Returns a decision and a phase plan. Never edits. |
 | Codex companion script | | escalation only: an opinion from a different provider on a disputed verdict |
 | you | | synthesis, conflict resolution, next-phase decisions, trivial work, the final report, and every destructive or outward-facing action |
 
-- Agents set model and effort in their frontmatter. Never pass `model`, except `model: opus` to retry a failed `implementer` phase.
-- Never spawn `Explore`: it inherits the main model, and `scout` does the same search for less. Never Haiku on a phase that writes or reviews code.
-- Retry on the same or a stronger model, never a cheaper one.
+Pass these names to the Agent tool exactly as written; the `tradecraft:` prefix is the plugin's and a bare name does not resolve.
+
+- Agents set model and effort in their frontmatter. Never pass `model`, except `model: opus` to retry a failed `tradecraft:implementer` phase.
+- Never spawn `Explore`: it inherits the main model, and `tradecraft:scout` does the same search for less. Never Haiku on a phase that writes or reviews code.
+- Retries follow the delegation rules below.
 
 ## Size triage
 
@@ -49,11 +51,11 @@ One phase is one bounded delegation to one worker. Declare every phase read-only
 
 Delegation does not cut total tokens: a worker re-reads what you would have read, and every spawn starts by writing its whole context to the cache. It pays in two ways only: a cheaper model does the work, or bulky output (searches, logs, test runs) stays out of your context. Spawn a phase when one of those holds; otherwise do the work yourself.
 
-A larger task may run `scout` (map), `deep-reasoner` (design), `implementer` (write), `reviewer` or `deep-reasoner` (verify). Split only when the modes differ.
+A larger task may run `tradecraft:scout` (map), `tradecraft:deep-reasoner` (design), `tradecraft:implementer` (write), `tradecraft:reviewer` or `tradecraft:deep-reasoner` (verify). Split only when the modes differ.
 
 ## Verification follows the phase
 
-Implement on the cheaper model, verify with the cheapest check that can catch the bug: the implementer's own test run first, a `scout` running the suite second, a `qa-runner` when only the running app shows the result, a `reviewer` when the change needs a reading of the diff that tests cannot give. Send verification to `deep-reasoner` only for work with many hidden edge cases: brownfield bugs, security, concurrency, parsers, data integrity. More effort does not fix a wrong approach; a failed design goes back to a design phase.
+Implement on the cheaper model, verify with the cheapest check that can catch the bug: the implementer's own test run first, a `tradecraft:scout` running the suite second, a `tradecraft:qa-runner` when only the running app shows the result, a `tradecraft:reviewer` when the change needs a reading of the diff that tests cannot give. Send verification to `tradecraft:deep-reasoner` only for work with many hidden edge cases: brownfield bugs, security, concurrency, parsers, data integrity. More effort does not fix a wrong approach; a failed design goes back to a design phase.
 
 ## Worker brief
 
@@ -61,7 +63,7 @@ Every M+ delegation carries a completion contract:
 
 - **Goal**: what this phase must accomplish.
 - **Inputs**: exact paths, symbols, errors, decisions already made, findings from earlier phases.
-- **Constraints**: technical and behavioral, including every rule the worker must follow. `scout`, `qa-runner`, and `reviewer` do not load CLAUDE.md; restate what they need.
+- **Constraints**: technical and behavioral, including every rule the worker must follow. `tradecraft:scout`, `tradecraft:qa-runner`, and `tradecraft:reviewer` do not load CLAUDE.md; restate what they need.
 - **Permissions**: `read-only` or `writes`, and for a writer the files it may touch.
 - **Done when**: concrete acceptance criteria.
 - **Expected output**: the worker report below, unless the phase needs another shape.
@@ -91,10 +93,10 @@ Enough to pick the next phase without redoing the work. No transcripts, no full 
 - Independent phases go in one message. Dependent phases wait for the earlier result.
 - Parallel writers get disjoint file sets. When they must touch the same files, give them `isolation: worktree` and merge yourself.
 - Act on **Status**. `NEEDS_CONTEXT`: supply it and resume the same worker; not a failure. `DONE_WITH_CONCERNS`: read the risks before choosing the next phase. `BLOCKED`: a failure.
-- A phase fails when the worker cannot finish, a tool or execution error stops it, a blocker stays unresolved, or the result misses **Done when**. Retry on the same or a stronger model. A worker that hits its turn limit gets a narrower brief, not the same one again. A phase that failed twice, or a next phase you cannot choose, goes once to `oracle` with the goal, the reason behind it, what was tried, the evidence, and the open question; run its plan on the normal roster. When a verdict stays disputed and an opinion from a different provider would settle it, ask Codex in one Bash call with the sandbox off: `node ~/.claude/plugins/cache/openai-codex/codex/<version>/scripts/codex-companion.mjs task --background "<prompt>"`, then `result <id>` from the same directory. Never pass `--write`, and never go through `/codex:rescue`: it adds a forwarding subagent and a write-capable default.
+- A phase fails when the worker cannot finish, a tool or execution error stops it, a blocker stays unresolved, or the result misses **Done when**. Retry on the same worker or a stronger one: `model: opus` for a failed `tradecraft:implementer` phase, `tradecraft:deep-reasoner` for a failed `tradecraft:reviewer` or `tradecraft:scout` phase, the same worker for a failed `tradecraft:qa-runner` or `tradecraft:deep-reasoner` phase; never a cheaper one. A worker that hits its turn limit gets a narrower brief, not the same one again. A phase that failed twice, or a next phase you cannot choose, goes once to `tradecraft:oracle` with the goal, the reason behind it, what was tried, the evidence, and the open question; run its plan on the normal roster. When a verdict stays disputed and an opinion from a different provider would settle it, ask Codex in one Bash call with the sandbox off: `node ~/.claude/plugins/cache/openai-codex/codex/<version>/scripts/codex-companion.mjs task --background "<prompt>"`, then `result <id>` from the same directory. Never pass `--write`, and never go through `/codex:rescue`: it adds a forwarding subagent and a write-capable default.
 - Trust completed worker output. Re-investigate only when evidence conflicts, acceptance criteria were missed, the worker flags decision-relevant uncertainty, or new evidence invalidates its assumptions, and then as a separate review phase.
 - Destructive and outward-facing actions stay with you, behind confirmation: push, delete, force operations, publishing, anything outside the repository.
-- `deep-reasoner` returns a conclusion, risks, and a recommendation. Use them; do not redo the reasoning.
+- `tradecraft:deep-reasoner` returns a conclusion, risks, and a recommendation. Use them; do not redo the reasoning.
 - Report conclusions, not worker transcripts. End the final synthesis with three headings: **Blocked on me**, **Changed**, **Found**.
 
 $ARGUMENTS

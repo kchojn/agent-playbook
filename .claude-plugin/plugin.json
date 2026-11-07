@@ -1,0 +1,13 @@
+{
+  "name": "tradecraft",
+  "description": "A delegation-first lead, a two-stage PR review, a review watcher, and six model-routed subagents for Claude Code.",
+  "version": "0.5.0",
+  "author": {
+    "name": "Karol Chojnowski",
+    "url": "https://github.com/kchojn"
+  },
+  "homepage": "https://github.com/kchojn/claude-code-tradecraft",
+  "repository": "https://github.com/kchojn/claude-code-tradecraft",
+  "license": "MIT",
+  "keywords": ["claude-code", "subagents", "orchestration", "delegation", "code-review", "pull-requests"]
+}
