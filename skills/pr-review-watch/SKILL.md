@@ -1,12 +1,12 @@
 ---
-description: One pass of the review watcher; finds open PRs that request your review and runs /pr-review --publish on each in its own headless session. Run it on a timer with /loop.
+description: One pass of the review watcher; finds open PRs that request your review and runs /tradecraft:pr-review --publish on each in its own headless session. Run it on a timer with /loop.
 argument-hint: [clone root dir]...
 ---
 
 Run one pass of the review watcher. Start it with:
 
 ```
-/loop 15m /pr-review-watch
+/loop 15m /tradecraft:pr-review-watch
 ```
 
 The clone roots are the directories that hold your local clones; a clone is a direct child of one of them. `$ARGUMENTS` lists them; when it is empty, read them from `~/.config/pr-review-watch/roots`, one directory per line, `~` allowed. When neither gives a root, print `no clone roots: pass directories or write ~/.config/pr-review-watch/roots` and end the pass; do nothing else.
@@ -17,7 +17,7 @@ State lives in `~/.cache/pr-review-watch/`: the directory `lock` exists while a 
 
 ## 1. Take the lock
 
-`mkdir ~/.cache/pr-review-watch/lock` is the lock: `mkdir` either creates it or fails, with no gap between the check and the claim. When it fails, read `lock/pid`; if `kill -0` on that pid succeeds, print `review batch running` and end the pass; if not, the batch died, so `rm -r lock` and take it again. Release the lock with `rm -r lock` at the end of a pass that starts no batch.
+`mkdir -p ~/.cache/pr-review-watch && mkdir ~/.cache/pr-review-watch/lock` is the lock: `mkdir` either creates it or fails, with no gap between the check and the claim. When it fails, read `lock/pid`; if `kill -0` on that pid succeeds, print `review batch running` and end the pass; if not, the batch died, so `rm -r lock` and take it again. When `lock/pid` is missing, step 5 has not written it yet: treat the lock as live and end the pass if the `lock` directory is younger than ten minutes (`find ~/.cache/pr-review-watch/lock -maxdepth 0 -mmin +10` prints nothing). Only a pid-less lock older than that is stale. Release the lock with `rm -r lock` at the end of a pass that starts no batch.
 
 ## 2. Find requests
 
@@ -59,7 +59,7 @@ When no PR remains, release the lock and print one line that says why: `no new r
 ```sh
 printf '%s\t%s\t%s\n' <clone> <url> <owner>/<repo>/<number>-<head7> ... | xargs -P 3 -L 1 sh -c '
   mkdir -p ~/.cache/pr-review-watch/results/$(dirname "$2")
-  cd "$0" && timeout -k 30s 60m claude -p "/pr-review $1 --publish" \
+  cd "$0" && timeout -k 30s 60m claude -p "/tradecraft:pr-review $1 --publish" \
     --permission-mode auto --permission-prompts none \
     --disallowedTools "Edit,Write,NotebookEdit" \
     --strict-mcp-config --max-budget-usd 10 \
@@ -79,4 +79,4 @@ When the background command's completion notice arrives, read only the `Review:`
 <owner/repo>#<number>: <Review event>, <findings> findings, highest <severity or none>
 ```
 
-When the file is not valid JSON or `is_error` is true, print `failed <owner/repo>#<number>` and the paths of the `.json` and `.err` files. When `.result` has none of those lines, `/pr-review` stopped early, for example on a draft; print its first line.
+When the file is not valid JSON or `is_error` is true, print `failed <owner/repo>#<number>` and the paths of the `.json` and `.err` files. When `.result` has none of those lines, `/tradecraft:pr-review` stopped early, for example on a draft; print its first line.
